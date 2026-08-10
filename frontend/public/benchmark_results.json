@@ -1,0 +1,281 @@
+{
+  "summary": {
+    "total_queries": 30,
+    "mean_compression_ratio": 0.7535,
+    "mean_latency_saved_ms": 51.03,
+    "mean_ttft_reduction_percent": 45.52,
+    "mean_semantic_similarity": 0.6092
+  },
+  "queries": [
+    {
+      "query": "What are the benefits of GPU rendering?",
+      "original_tokens": 150,
+      "compressed_tokens": 53,
+      "ratio": 0.6467,
+      "latency_saved_ms": 50.68,
+      "ttft_reduction_percent": 42.0,
+      "similarity": 0.7869
+    },
+    {
+      "query": "Explain CPU serial instruction execution.",
+      "original_tokens": 104,
+      "compressed_tokens": 21,
+      "ratio": 0.7981,
+      "latency_saved_ms": 49.8,
+      "ttft_reduction_percent": 46.27,
+      "similarity": 0.7044
+    },
+    {
+      "query": "RAG systems context grounding",
+      "original_tokens": 103,
+      "compressed_tokens": 21,
+      "ratio": 0.7961,
+      "latency_saved_ms": 48.28,
+      "ttft_reduction_percent": 44.75,
+      "similarity": 0.5815
+    },
+    {
+      "query": "lost in the middle phenomenon in large language models",
+      "original_tokens": 150,
+      "compressed_tokens": 42,
+      "ratio": 0.72,
+      "latency_saved_ms": 54.0,
+      "ttft_reduction_percent": 46.55,
+      "similarity": 0.7772
+    },
+    {
+      "query": "Qdrant vector similarity features",
+      "original_tokens": 143,
+      "compressed_tokens": 35,
+      "ratio": 0.7552,
+      "latency_saved_ms": 54.0,
+      "ttft_reduction_percent": 47.2,
+      "similarity": 0.5443
+    },
+    {
+      "query": "dynamic context compression algorithms",
+      "original_tokens": 109,
+      "compressed_tokens": 18,
+      "ratio": 0.8349,
+      "latency_saved_ms": 50.12,
+      "ttft_reduction_percent": 46.92,
+      "similarity": 0.5069
+    },
+    {
+      "query": "BM25 lexical sparse search parameters",
+      "original_tokens": 112,
+      "compressed_tokens": 29,
+      "ratio": 0.7411,
+      "latency_saved_ms": 49.84,
+      "ttft_reduction_percent": 45.24,
+      "similarity": 0.7015
+    },
+    {
+      "query": "Reciprocal Rank Fusion hybrid search scoring",
+      "original_tokens": 140,
+      "compressed_tokens": 32,
+      "ratio": 0.7714,
+      "latency_saved_ms": 52.96,
+      "ttft_reduction_percent": 46.9,
+      "similarity": 0.5015
+    },
+    {
+      "query": "sentence level context pruning strategies",
+      "original_tokens": 109,
+      "compressed_tokens": 18,
+      "ratio": 0.8349,
+      "latency_saved_ms": 50.12,
+      "ttft_reduction_percent": 46.92,
+      "similarity": 0.5069
+    },
+    {
+      "query": "compare CPU and GPU rendering speeds",
+      "original_tokens": 104,
+      "compressed_tokens": 35,
+      "ratio": 0.6635,
+      "latency_saved_ms": 46.2,
+      "ttft_reduction_percent": 40.51,
+      "similarity": 0.6656
+    },
+    {
+      "query": "reduce hallucination in RAG applications",
+      "original_tokens": 112,
+      "compressed_tokens": 21,
+      "ratio": 0.8125,
+      "latency_saved_ms": 51.04,
+      "ttft_reduction_percent": 47.06,
+      "similarity": 0.5743
+    },
+    {
+      "query": "effects of context length on LLM accuracy",
+      "original_tokens": 109,
+      "compressed_tokens": 23,
+      "ratio": 0.789,
+      "latency_saved_ms": 49.52,
+      "ttft_reduction_percent": 45.98,
+      "similarity": 0.5115
+    },
+    {
+      "query": "MS MARCO BEIR benchmarks for retrieval",
+      "original_tokens": 104,
+      "compressed_tokens": 27,
+      "ratio": 0.7404,
+      "latency_saved_ms": 48.44,
+      "ttft_reduction_percent": 43.97,
+      "similarity": 0.6755
+    },
+    {
+      "query": "approximate nearest neighbor search in Qdrant",
+      "original_tokens": 150,
+      "compressed_tokens": 43,
+      "ratio": 0.7133,
+      "latency_saved_ms": 53.04,
+      "ttft_reduction_percent": 45.71,
+      "similarity": 0.7332
+    },
+    {
+      "query": "sentence embeddings MiniLM dimension counts",
+      "original_tokens": 140,
+      "compressed_tokens": 26,
+      "ratio": 0.8143,
+      "latency_saved_ms": 55.0,
+      "ttft_reduction_percent": 49.6,
+      "similarity": 0.5947
+    },
+    {
+      "query": "how to prune context text in NLP pipelines",
+      "original_tokens": 147,
+      "compressed_tokens": 61,
+      "ratio": 0.585,
+      "latency_saved_ms": 48.08,
+      "ttft_reduction_percent": 39.24,
+      "similarity": 0.7567
+    },
+    {
+      "query": "serial core vs parallel threads graphics",
+      "original_tokens": 104,
+      "compressed_tokens": 21,
+      "ratio": 0.7981,
+      "latency_saved_ms": 49.28,
+      "ttft_reduction_percent": 45.27,
+      "similarity": 0.6568
+    },
+    {
+      "query": "lost-in-the-middle degradation mitigation",
+      "original_tokens": 150,
+      "compressed_tokens": 29,
+      "ratio": 0.8067,
+      "latency_saved_ms": 56.92,
+      "ttft_reduction_percent": 50.55,
+      "similarity": 0.7004
+    },
+    {
+      "query": "Qdrant client memory mode setup",
+      "original_tokens": 140,
+      "compressed_tokens": 35,
+      "ratio": 0.75,
+      "latency_saved_ms": 52.52,
+      "ttft_reduction_percent": 46.09,
+      "similarity": 0.5502
+    },
+    {
+      "query": "sparse vs dense hybrid score calculations",
+      "original_tokens": 140,
+      "compressed_tokens": 32,
+      "ratio": 0.7714,
+      "latency_saved_ms": 54.0,
+      "ttft_reduction_percent": 47.67,
+      "similarity": 0.4672
+    },
+    {
+      "query": "calculate compression ratio on token level",
+      "original_tokens": 140,
+      "compressed_tokens": 32,
+      "ratio": 0.7714,
+      "latency_saved_ms": 53.36,
+      "ttft_reduction_percent": 46.78,
+      "similarity": 0.492
+    },
+    {
+      "query": "semantic overlap calculation in context pruner",
+      "original_tokens": 147,
+      "compressed_tokens": 42,
+      "ratio": 0.7143,
+      "latency_saved_ms": 53.0,
+      "ttft_reduction_percent": 46.12,
+      "similarity": 0.6112
+    },
+    {
+      "query": "estimated API cost reduction in RAG optimization",
+      "original_tokens": 150,
+      "compressed_tokens": 45,
+      "ratio": 0.7,
+      "latency_saved_ms": 52.88,
+      "ttft_reduction_percent": 45.49,
+      "similarity": 0.6406
+    },
+    {
+      "query": "downstream LLM prompt token limits",
+      "original_tokens": 144,
+      "compressed_tokens": 36,
+      "ratio": 0.75,
+      "latency_saved_ms": 54.0,
+      "ttft_reduction_percent": 47.38,
+      "similarity": 0.4935
+    },
+    {
+      "query": "fast CrossEncoder ms-marco-MiniLM model",
+      "original_tokens": 139,
+      "compressed_tokens": 34,
+      "ratio": 0.7554,
+      "latency_saved_ms": 52.52,
+      "ttft_reduction_percent": 46.27,
+      "similarity": 0.5877
+    },
+    {
+      "query": "BM25 index over retrieved sentences",
+      "original_tokens": 109,
+      "compressed_tokens": 18,
+      "ratio": 0.8349,
+      "latency_saved_ms": 51.16,
+      "ttft_reduction_percent": 47.76,
+      "similarity": 0.4321
+    },
+    {
+      "query": "retrieve top-k chunks from vector stores",
+      "original_tokens": 102,
+      "compressed_tokens": 21,
+      "ratio": 0.7941,
+      "latency_saved_ms": 49.04,
+      "ttft_reduction_percent": 45.4,
+      "similarity": 0.4856
+    },
+    {
+      "query": "difference between CPU and GPU parallelization",
+      "original_tokens": 104,
+      "compressed_tokens": 43,
+      "ratio": 0.5865,
+      "latency_saved_ms": 43.6,
+      "ttft_reduction_percent": 36.49,
+      "similarity": 0.817
+    },
+    {
+      "query": "cosine distance metric vector search accuracy",
+      "original_tokens": 104,
+      "compressed_tokens": 29,
+      "ratio": 0.7212,
+      "latency_saved_ms": 47.48,
+      "ttft_reduction_percent": 42.49,
+      "similarity": 0.711
+    },
+    {
+      "query": "syntactic complexity heuristic context pruner",
+      "original_tokens": 109,
+      "compressed_tokens": 18,
+      "ratio": 0.8349,
+      "latency_saved_ms": 50.12,
+      "ttft_reduction_percent": 46.92,
+      "similarity": 0.5069
+    }
+  ]
+}
