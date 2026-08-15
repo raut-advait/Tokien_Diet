@@ -69,6 +69,7 @@ class SearchAndCompressRequest(BaseModel):
     mode: str | None = Field("fixed", pattern="^(adaptive|fixed)$", example="fixed")
     target_ratio: float = Field(0.5, ge=0.0, le=1.0, example=0.5)
     dynamic_compression: bool | None = Field(None, example=True)
+    model: str | None = Field("llama-3.1-8b-instant", example="llama-3.1-8b-instant")
 
 class LLMMetrics(BaseModel):
     ttft_ms: float
@@ -133,9 +134,9 @@ def synthesize_concise_answer(query: str, context: str) -> str:
             
     return " ".join(ordered_sentences)
 
-def query_groq_api(query: str, context: str) -> dict:
+def query_groq_api(query: str, context: str, model: str = "llama-3.1-8b-instant") -> dict:
     """
-    Calls Groq API to run Llama-3.1-8B completions.
+    Calls Groq API to run completions.
     If GROQ_API_KEY is missing, runs a simulated response mirroring expected latency/TTFT.
     """
     api_key = os.getenv("GROQ_API_KEY")
@@ -169,8 +170,13 @@ def query_groq_api(query: str, context: str) -> dict:
     # Ensure prompt is non-empty
     safe_prompt = prompt if prompt.strip() else "Provide a general greeting or overview."
     
+    # Ensure model is validated/sanitized
+    safe_model = model.strip() if model else ""
+    if safe_model == "llama3-8b-8192" or not safe_model:
+        safe_model = "llama-3.1-8b-instant"
+        
     data = {
-        "model": "llama-3.1-8b-instant",
+        "model": safe_model,
         "messages": [{"role": "user", "content": safe_prompt}],
         "temperature": 0.2,
         "max_tokens": 1024,
@@ -279,9 +285,13 @@ async def search_and_compress_route(req: SearchAndCompressRequest):
         
         compressed_context = comp_result["compressed_context"]
         
-        # 4. Invoke LLM dynamically
-        full_metrics = query_groq_api(sanitized_query, full_context)
-        comp_metrics = query_groq_api(sanitized_query, compressed_context)
+        # 4. Invoke LLM dynamically with sanitization
+        req_model = req.model.strip() if req.model else ""
+        if req_model == "llama3-8b-8192" or not req_model:
+            req_model = "llama-3.1-8b-instant"
+            
+        full_metrics = query_groq_api(sanitized_query, full_context, model=req_model)
+        comp_metrics = query_groq_api(sanitized_query, compressed_context, model=req_model)
         
         return {
             "query": sanitized_query,

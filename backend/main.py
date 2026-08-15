@@ -30,6 +30,7 @@ class SearchAndCompressRequest(BaseModel):
     query: str
     context: Optional[str] = None
     ratio: Optional[float] = None
+    model: Optional[str] = "llama-3.1-8b-instant"
 
 # 5. Route Handlers
 @app.get("/")
@@ -41,5 +42,10 @@ async def search_and_compress(req: SearchAndCompressRequest):
     if not GROQ_API_KEY or not client:
         raise HTTPException(status_code=500, detail="GROQ_API_KEY is not configured on the server.")
 
-    # Execute compressor logic and LLM calls here...
-    return {"status": "success", "model": GROQ_MODEL}
+    # Sanitize incoming model
+    req_model = req.model.strip() if req.model else ""
+    if req_model == "llama3-8b-8192" or not req_model:
+        req_model = "llama-3.1-8b-instant"
+
+    # Execute compressor logic and LLM calls here using req_model...
+    return {"status": "success", "model": req_model}
