@@ -171,16 +171,14 @@ def query_groq_api(query: str, context: str, model: str = "llama-3.1-8b-instant"
     safe_prompt = prompt if prompt.strip() else "Provide a general greeting or overview."
     
     # Ensure model is validated/sanitized
-    safe_model = model.strip() if model else ""
-    if safe_model == "llama3-8b-8192" or not safe_model:
-        safe_model = "llama-3.1-8b-instant"
+    if not model or "llama3-8b-8192" in str(model) or "llama3-8b" in str(model):
+        model = "llama-3.1-8b-instant"
         
     data = {
-        "model": safe_model,
+        "model": model,
         "messages": [{"role": "user", "content": safe_prompt}],
         "temperature": 0.2,
-        "max_tokens": 1024,
-        "stream": False
+        "max_tokens": 1024
     }
     
     try:
@@ -286,8 +284,8 @@ async def search_and_compress_route(req: SearchAndCompressRequest):
         compressed_context = comp_result["compressed_context"]
         
         # 4. Invoke LLM dynamically with sanitization
-        req_model = req.model.strip() if req.model else ""
-        if req_model == "llama3-8b-8192" or not req_model:
+        req_model = req.model
+        if not req_model or "llama3-8b-8192" in str(req_model) or "llama3-8b" in str(req_model):
             req_model = "llama-3.1-8b-instant"
             
         full_metrics = query_groq_api(sanitized_query, full_context, model=req_model)
