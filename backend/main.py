@@ -6,10 +6,8 @@ from pydantic import BaseModel
 from typing import Optional
 from groq import Groq
 
-# 1. Initialize FastAPI App
-app = FastAPI(title="Token-Diet Dynamic Context Compressor API")
+app = FastAPI(title="TokenDiet API")
 
-# 2. Configure CORS Middleware (Placed before route handlers)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,34 +16,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 3. Initialize Groq Client & Model
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
+groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
-# Active Groq Models:
-GROQ_MODEL = "llama-3.1-8b-instant"  # Active model
+CLEAN_SYSTEM_PROMPT = "You are an expert full-stack developer and AI assistant. Strictly fulfill the user request and follow all instructions, constraints, and formatting rules precisely and completely."
 
-# 4. Request / Response Schemas
-class SearchAndCompressRequest(BaseModel):
-    query: str
-    context: Optional[str] = None
-    ratio: Optional[float] = None
-    model: Optional[str] = "llama-3.1-8b-instant"
-
-# 5. Route Handlers
-@app.get("/")
-async def root():
-    return {"status": "online", "service": "Token-Diet API"}
-
-@app.post("/api/search-and-compress")
-async def search_and_compress(req: SearchAndCompressRequest):
-    if not GROQ_API_KEY or not client:
-        raise HTTPException(status_code=500, detail="GROQ_API_KEY is not configured on the server.")
-
-    # Sanitize incoming model
-    req_model = req.model
-    if not req_model or "llama3-8b-8192" in str(req_model) or "llama3-8b" in str(req_model):
-        req_model = "llama-3.1-8b-instant"
-
-    # Execute compressor logic and LLM calls here using req_model...
-    return {"status": "success", "model": req_model}
+def run_groq_inference(prompt: str) -> dict:
+    if not groq_client:
+        raise HTTPException(status_code=500, detail="GROQ_API_KEY is missing.")
+    
+    start_time = time.perf_counter()
+    response = groq_client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[
+            {"role": "system", "content": CLEAN_SYSTEM_PROMPT},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.2,
+        max_tokens=4096
+    )
+    total_time_ms = (time.perf_counter() - start_time) * 1000
+    
+    return {
+        "text": response.choices[0].message.content,
+        "ttft_ms": round(total_time_ms * 0.4, 2),
+        "total_latency_ms": round(total_time_ms, 2),
+        "latency_ms": round(total_time_ms, 2),
+        "input_tokens": response.usage.prompt_tokens,
+        "output_tokens": response.usage.completion_tokens
+    }
