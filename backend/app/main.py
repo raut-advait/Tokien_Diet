@@ -2,12 +2,23 @@ import os
 import re
 import time
 import requests
+import logging
+import sys
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from app.compressor import ContextCompressor
 from app.vector_store import VectorStore
 from scripts.ingest_benchmark import HybridRetriever, SAMPLE_CORPUS
+
+# Configure standard logging to flush output immediately to sys.stdout
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 
 app = FastAPI(title="Token-Diet Dynamic Context Compressor API")
 
@@ -191,9 +202,18 @@ def query_groq_api(query: str, context: str, model: str = "llama-3.1-8b-instant"
         
     data = {
         "model": model,
-        "messages": [{"role": "user", "content": safe_prompt}],
-        "temperature": 0.2,
-        "max_tokens": 1024
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are an expert full-stack developer and AI assistant. Follow all instructions, constraints, and requirements provided in the user prompt and context precisely and completely."
+            },
+            {
+                "role": "user",
+                "content": safe_prompt
+            }
+        ],
+        "temperature": 0.3,
+        "max_tokens": 4096
     }
     
     try:
@@ -285,6 +305,7 @@ async def search_and_compress_route(req: SearchAndCompressRequest):
     try:
         # Sanitize incoming query quotes
         sanitized_query = req.query.strip('"').strip("'").strip()
+        print(f"Received search-and-compress request for query: {sanitized_query}", flush=True)
         
         # 1. Fetch chunks (User context override vs dynamic hybrid search)
         if req.context and req.context.strip():
@@ -325,6 +346,8 @@ async def search_and_compress_route(req: SearchAndCompressRequest):
             for c in comp_result["sentence_diffs"]
         ]
         
+        print(f"Success: Processed '{sanitized_query}'. Comp latency: {comp_latency_ms:.2f}ms. Ratio: {ratio_percent}. Model: {req_model}", flush=True)
+        
         return {
             "original_tokens": comp_result["original_tokens"],
             "compressed_tokens": comp_result["compressed_tokens"],
@@ -348,4 +371,5 @@ async def search_and_compress_route(req: SearchAndCompressRequest):
             }
         }
     except Exception as e:
+        print(f"Error in search-and-compress: {str(e)}", flush=True)
         raise HTTPException(status_code=500, detail=str(e))

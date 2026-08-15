@@ -57,16 +57,74 @@ class ContextCompressor:
         return float(0.8 - 0.5 * complexity)
 
     def _mock_cross_encoder(self, query: str, sentences: list[str]) -> list[float]:
-        # Word overlap based similarity simulation
-        query_words = set(query.lower().split())
+        stopwords = {
+            "i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "your", "yours", 
+            "yourself", "yourselves", "he", "him", "his", "himself", "she", "her", "hers", "herself", 
+            "it", "its", "itself", "they", "them", "their", "theirs", "themselves", "what", "which", 
+            "who", "whom", "this", "that", "these", "those", "am", "is", "are", "was", "were", "be", 
+            "been", "being", "have", "has", "had", "having", "do", "does", "did", "doing", "a", "an", 
+            "the", "and", "but", "if", "or", "because", "as", "until", "while", "of", "at", "by", "for", 
+            "with", "about", "against", "between", "into", "through", "during", "before", "after", 
+            "above", "below", "to", "from", "up", "down", "in", "out", "on", "off", "over", "under", 
+            "again", "further", "then", "once", "here", "there", "when", "where", "why", "how", "all", 
+            "any", "both", "each", "few", "more", "most", "other", "some", "such", "no", "nor", "not", 
+            "only", "own", "same", "so", "than", "too", "very", "s", "t", "can", "will", "just", "don", 
+            "should", "now"
+        }
+        
+        def tokenize_clean(text: str) -> list[str]:
+            words = re.findall(r'\b\w+\b', text.lower())
+            cleaned = []
+            for w in words:
+                if w not in stopwords:
+                    # Simple stemming rule (suffix pruning)
+                    if w.endswith("ing") and len(w) > 5:
+                        w = w[:-3]
+                    elif w.endswith("ed") and len(w) > 4:
+                        w = w[:-2]
+                    elif w.endswith("ly") and len(w) > 4:
+                        w = w[:-2]
+                    elif w.endswith("es") and len(w) > 4:
+                        w = w[:-2]
+                    elif w.endswith("s") and len(w) > 3:
+                        w = w[:-1]
+                    cleaned.append(w)
+            return cleaned
+
+        query_terms = tokenize_clean(query)
+        if not query_terms:
+            query_terms = [w.lower() for w in re.findall(r'\b\w+\b', query)]
+            
         scores = []
-        for s in sentences:
-            s_words = set(s.lower().split())
-            intersection = query_words.intersection(s_words)
-            # Jaccard index-like score
-            union = query_words.union(s_words)
-            overlap = len(intersection) / len(union) if union else 0.0
-            scores.append(overlap)
+        for idx, s in enumerate(sentences):
+            s_terms = tokenize_clean(s)
+            s_words_raw = re.findall(r'\b\w+\b', s.lower())
+            
+            # 1. Term overlap similarity
+            term_matches = sum(1 for qt in query_terms if qt in s_terms)
+            tf_score = term_matches / len(query_terms) if query_terms else 0.0
+            
+            # 2. Instruction cues weighting (keep important instruction keywords)
+            instruction_keywords = {"instruction", "constraint", "requirement", "must", "should", "always", "never", "rules", "format", "output", "code", "design"}
+            instruction_score = sum(0.15 for w in s_words_raw if w in instruction_keywords)
+            
+            # 3. Header/Structure weighting
+            structure_score = 0.0
+            s_stripped = s.strip()
+            if s_stripped.startswith(("#", "-", "*", ">", "1.", "2.", "3.")):
+                structure_score = 0.25
+                
+            # 4. Positional Weighting
+            positional_weight = 0.0
+            if idx == 0 or idx == len(sentences) - 1:
+                positional_weight = 0.1
+                
+            # 5. Length Fallback
+            length_boost = min(len(s_words_raw) / 100.0, 0.05)
+            
+            combined = tf_score + instruction_score + structure_score + positional_weight + length_boost
+            scores.append(max(float(combined), 0.01))
+            
         return scores
 
     def compute_hybrid_scores(self, query: str, sentences: list[str]) -> list[float]:
