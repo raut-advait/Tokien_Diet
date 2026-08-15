@@ -362,24 +362,25 @@ class ContextCompressor:
                 "original_index": idx
             })
             
-        # Select highest-scoring sentences that fit under the target token budget
-        # Sort by score descending to prioritize selection
-        selection_pool = sorted(scored_sentences, key=lambda x: x["score"], reverse=True)
-        
-        # Calculate retention count cap: cap to 5 sentences when actual_ratio > 0.5
-        max_sentences_allowed = len(scored_sentences)
-        if actual_ratio > 0.5:
-            max_sentences_allowed = 5
+        # Guard: If the single highest raw scoring chunk does not fit under target_tokens,
+        # widen target_tokens to fit it so it isn't silently dropped.
+        highest_scoring_chunk = max(scored_sentences, key=lambda x: x["score"]) if scored_sentences else None
+        if highest_scoring_chunk and target_tokens < highest_scoring_chunk["tokens"]:
+            target_tokens = highest_scoring_chunk["tokens"]
             
+        # Select highest-scoring sentences that fit under the target token budget
+        # Sort by score density (score / max(tokens, 1)) descending to approximate knapsack optimum
+        selection_pool = sorted(scored_sentences, key=lambda x: x["score"] / max(x["tokens"], 1), reverse=True)
+        
         kept = []
         current_tokens = 0
         for s in selection_pool:
-            if s["score"] >= 0.20 and len(kept) < max_sentences_allowed:
+            if s["score"] >= 0.20:
                 if current_tokens + s["tokens"] <= target_tokens or not kept:
                     kept.append(s)
                     current_tokens += s["tokens"]
                     
-        # Fallback to keep the single best chunk if none met the threshold
+        # Fallback to keep the single best density-score chunk if none met the threshold
         if not kept and scored_sentences:
             kept.append(selection_pool[0])
                 

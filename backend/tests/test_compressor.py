@@ -195,3 +195,18 @@ def test_unfenced_html_preservation(compressor):
     assert "</h3>" in html_chunk
     assert "<p>" in html_chunk
     assert "</p>" in html_chunk
+
+def test_knapsack_code_survival(compressor):
+    query = "python hello world function"
+    code_fence = (
+        "```python\n"
+        "def run_hello_world():\n"
+        "    # This is a highly relevant python hello world function\n"
+        "    print('Hello, World!')\n"
+        "```"
+    )
+    bullets = [f"- Bullet item {i} with unrelated content about weather or fruit." for i in range(25)]
+    context = code_fence + "\n\n" + "\n".join(bullets)
+    
+    result = compressor.compress(query, context, mode="fixed", target_ratio=0.7)
+    assert code_fence in result["compressed_context"]
