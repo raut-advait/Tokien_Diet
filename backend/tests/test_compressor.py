@@ -168,3 +168,30 @@ def test_markdown_aware_chunker(compressor):
     list_chunks = [ch for ch in chunks if "- Item 1" in ch]
     assert len(list_chunks) == 1
     assert "Nested Item 2.1" in list_chunks[0]
+
+def test_unfenced_html_preservation(compressor):
+    input_text = (
+        "Here is some introductory prose sentence one. And sentence two.\n\n"
+        "<div class=\"card\">\n"
+        "  <h3>Title</h3>\n"
+        "  <p>Desc</p>\n"
+        "</div>\n\n"
+        "Here is some closing prose sentences."
+    )
+    
+    chunks = compressor.split_markdown_into_atomic_chunks(input_text)
+    
+    # Locate the chunk containing the HTML card
+    html_chunks = [ch for ch in chunks if '<div class="card">' in ch]
+    assert len(html_chunks) == 1
+    
+    # Assert that the HTML container remains in a single atomic chunk
+    html_chunk = html_chunks[0]
+    
+    # Assert that opening tags have their corresponding closing tags in the same chunk
+    assert '<div class="card">' in html_chunk
+    assert "</div>" in html_chunk
+    assert "<h3>" in html_chunk
+    assert "</h3>" in html_chunk
+    assert "<p>" in html_chunk
+    assert "</p>" in html_chunk

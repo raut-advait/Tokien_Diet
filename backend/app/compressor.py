@@ -35,21 +35,40 @@ class ContextCompressor:
             if current_prose_chunk:
                 prose_text = "\n".join(current_prose_chunk).strip()
                 if prose_text:
-                    sentence_end = re.compile(
-                        r'(?<!\b[iI]\.[eE]\.)'
-                        r'(?<!\b[eE]\.[gG]\.)'
-                        r'(?<!\b[dD][rR]\.)'
-                        r'(?<!\b[aA]\.[mM]\.)'
-                        r'(?<!\b[pP]\.[mM]\.)'
-                        r'(?<!\b[vV][sS]\.)'
-                        r'(?<!\d\.)'
-                        r'(?<=\.|\?|!)\s+'
-                    )
-                    sentences = sentence_end.split(prose_text)
-                    for s in sentences:
-                        s_stripped = s.strip()
-                        if s_stripped:
-                            chunks.append(s_stripped)
+                    # 1. HTML/JSX Tag Matches
+                    tag_pattern = re.compile(r'</?[a-zA-Z][a-zA-Z0-9]*(?:\s+[^<>]*)?/?>')
+                    tag_count = len(tag_pattern.findall(prose_text))
+                    
+                    # 2. Syntax Character Density
+                    syntax_targets = ['{', '}', ';', '=>', '===', '!=', '()', '[]']
+                    syntax_count = sum(prose_text.count(sym) for sym in syntax_targets)
+                    total_len = len(prose_text)
+                    code_density = syntax_count / total_len if total_len > 0 else 0.0
+                    
+                    # Calculate total lines
+                    total_lines = len(prose_text.splitlines())
+                    
+                    # Pre-check decision
+                    if tag_count >= 2 or (tag_count >= 1 and total_lines > 1) or code_density >= 0.035:
+                        # Treat prose_text as an atomic block: append directly
+                        chunks.append(prose_text)
+                    else:
+                        # Proceed with standard sentence splitting
+                        sentence_end = re.compile(
+                            r'(?<!\b[iI]\.[eE]\.)'
+                            r'(?<!\b[eE]\.[gG]\.)'
+                            r'(?<!\b[dD][rR]\.)'
+                            r'(?<!\b[aA]\.[mM]\.)'
+                            r'(?<!\b[pP]\.[mM]\.)'
+                            r'(?<!\b[vV][sS]\.)'
+                            r'(?<!\d\.)'
+                            r'(?<=\.|\?|!)\s+'
+                        )
+                        sentences = sentence_end.split(prose_text)
+                        for s in sentences:
+                            s_stripped = s.strip()
+                            if s_stripped:
+                                chunks.append(s_stripped)
                 current_prose_chunk = []
                 
         def flush_table():
