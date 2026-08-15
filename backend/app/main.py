@@ -3,12 +3,21 @@ import re
 import time
 import requests
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from app.compressor import ContextCompressor
 from app.vector_store import VectorStore
 from scripts.ingest_benchmark import HybridRetriever, SAMPLE_CORPUS
 
 app = FastAPI(title="Token-Diet Dynamic Context Compressor API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Setup configurations
 use_mock = os.getenv("USE_MOCK_ENCODER", "false").lower() == "true"
