@@ -117,3 +117,20 @@ def test_hybrid_retriever_search():
     hybrid_res = retriever.hybrid_search("GPU parallel", limit=1)
     assert len(hybrid_res) == 1
     assert hybrid_res[0]["id"] == 2
+
+def test_sharp_semantic_pruning_limits(compressor):
+    query = "CPU benchmark GPU"
+    sentences = []
+    # Create 30 sentences, each ~100 characters (total ~3000 chars)
+    for i in range(30):
+        if i % 6 == 0:
+            sentences.append(f"Sentence {i}: This is a CPU and GPU benchmark test line which has relevant terms.")
+        else:
+            sentences.append(f"Sentence {i}: This is an irrelevant line containing filler context words about fruit or math.")
+            
+    context = " ".join(sentences)
+    result = compressor.compress(query, context, mode="fixed", target_ratio=0.7)
+    
+    # Verify that the retained chunks count is <= 5
+    retained_chunks = [c for c in result["chunks"] if c["retained"]]
+    assert len(retained_chunks) <= 5

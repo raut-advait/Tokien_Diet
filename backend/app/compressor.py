@@ -227,15 +227,25 @@ class ContextCompressor:
         # Sort by score descending to prioritize selection
         selection_pool = sorted(scored_sentences, key=lambda x: x["score"], reverse=True)
         
+        # Calculate retention count cap: cap to 5 sentences when actual_ratio > 0.5
+        max_sentences_allowed = len(scored_sentences)
+        if actual_ratio > 0.5:
+            max_sentences_allowed = 5
+            
         kept = []
         current_tokens = 0
         for s in selection_pool:
-            if current_tokens + s["tokens"] <= target_tokens or not kept:
-                kept.append(s)
-                current_tokens += s["tokens"]
+            if s["score"] >= 0.20 and len(kept) < max_sentences_allowed:
+                if current_tokens + s["tokens"] <= target_tokens or not kept:
+                    kept.append(s)
+                    current_tokens += s["tokens"]
+                    
+        # Fallback to keep the single best chunk if none met the threshold
+        if not kept and scored_sentences:
+            kept.append(selection_pool[0])
                 
-        # Reorder kept sentences to combat Lost-in-the-Middle degradation
-        reordered_kept = self.reorder_lost_in_the_middle(kept)
+        # Join retained chunks maintaining their original document order to preserve coherent flow
+        reordered_kept = sorted(kept, key=lambda x: x["original_index"])
         
         # Compile compressed text
         compressed_context = " ".join([s["sentence"] for s in reordered_kept])
