@@ -213,55 +213,77 @@ def query_groq_api(query: str, context: str, model: str = "llama-3.1-8b-instant"
             }
         ],
         "temperature": 0.3,
-        "max_tokens": 4096
+        "max_tokens": 1536
     }
     
-    try:
-        response = requests.post(url, headers=headers, json=data, timeout=10.0)
-        response.raise_for_status()
-        resp_json = response.json()
-        
-        total_time = (time.time() - start_time) * 1000
-        output_text = resp_json["choices"][0]["message"]["content"]
-        
-        # Estimate TTFT as time to headers (approx 70% of non-streamed time for Groq)
-        ttft = total_time * 0.7
-        
-        usage = resp_json.get("usage", {})
-        api_input_tokens = usage.get("prompt_tokens", input_tokens)
-        
-        return {
-            "text": output_text,
-            "output": output_text,
-            "ttft_ms": round(ttft, 2),
-            "latency_ms": round(total_time, 2),
-            "total_latency_ms": round(total_time, 2),
-            "input_tokens": api_input_tokens,
-            "tokens": usage.get("completion_tokens", len(output_text) // 4)
-        }
-    except requests.exceptions.HTTPError as e:
-        error_body = f" | Body: {e.response.text}" if e.response is not None else ""
-        print(f"Groq API HTTP Error: {str(e)}{error_body}")
-        return {
-            "text": f"Error calling Groq API: {str(e)}{error_body}",
-            "output": f"Error calling Groq API: {str(e)}{error_body}",
-            "ttft_ms": 150.0,
-            "latency_ms": 400.0,
-            "total_latency_ms": 400.0,
-            "input_tokens": input_tokens,
-            "tokens": 0
-        }
-    except Exception as e:
-        print(f"Groq API Error: {str(e)}")
-        return {
-            "text": f"Error calling Groq API: {str(e)}",
-            "output": f"Error calling Groq API: {str(e)}",
-            "ttft_ms": 150.0,
-            "latency_ms": 400.0,
-            "total_latency_ms": 400.0,
-            "input_tokens": input_tokens,
-            "tokens": 0
-        }
+    max_retries = 2
+    for attempt in range(max_retries + 1):
+        try:
+            response = requests.post(url, headers=headers, json=data, timeout=10.0)
+            
+            # Catch Rate Limit Error (HTTP 429)
+            if response.status_code == 429:
+                if attempt < max_retries:
+                    print(f"Groq API Rate Limit (429) hit. Sleeping 2 seconds before retry {attempt + 1}/{max_retries}...", flush=True)
+                    time.sleep(2)
+                    continue
+                else:
+                    response.raise_for_status()
+                    
+            response.raise_for_status()
+            resp_json = response.json()
+            
+            total_time = (time.time() - start_time) * 1000
+            output_text = resp_json["choices"][0]["message"]["content"]
+            
+            # Estimate TTFT as time to headers (approx 70% of non-streamed time for Groq)
+            ttft = total_time * 0.7
+            
+            usage = resp_json.get("usage", {})
+            api_input_tokens = usage.get("prompt_tokens", input_tokens)
+            
+            return {
+                "text": output_text,
+                "output": output_text,
+                "ttft_ms": round(ttft, 2),
+                "latency_ms": round(total_time, 2),
+                "total_latency_ms": round(total_time, 2),
+                "input_tokens": api_input_tokens,
+                "tokens": usage.get("completion_tokens", len(output_text) // 4)
+            }
+        except requests.exceptions.HTTPError as e:
+            # If 429 occurs, retry if we have remaining attempts
+            is_429 = False
+            if e.response is not None and e.response.status_code == 429:
+                is_429 = True
+                
+            if is_429 and attempt < max_retries:
+                print(f"Groq API Rate Limit (429) caught in HTTPError. Sleeping 2 seconds before retry {attempt + 1}/{max_retries}...", flush=True)
+                time.sleep(2)
+                continue
+                
+            error_body = f" | Body: {e.response.text}" if e.response is not None else ""
+            print(f"Groq API HTTP Error after {attempt} retries: {str(e)}{error_body}", flush=True)
+            return {
+                "text": f"Error calling Groq API: {str(e)}{error_body}",
+                "output": f"Error calling Groq API: {str(e)}{error_body}",
+                "ttft_ms": 150.0,
+                "latency_ms": 400.0,
+                "total_latency_ms": 400.0,
+                "input_tokens": input_tokens,
+                "tokens": 0
+            }
+        except Exception as e:
+            print(f"Groq API General Error after {attempt} retries: {str(e)}", flush=True)
+            return {
+                "text": f"Error calling Groq API: {str(e)}",
+                "output": f"Error calling Groq API: {str(e)}",
+                "ttft_ms": 150.0,
+                "latency_ms": 400.0,
+                "total_latency_ms": 400.0,
+                "input_tokens": input_tokens,
+                "tokens": 0
+            }
 
 @app.get("/")
 async def root():
