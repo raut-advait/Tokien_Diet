@@ -18,11 +18,131 @@ class ContextCompressor:
                 print("sentence-transformers not installed. Falling back to mock encoder.")
                 self.use_mock_encoder = True
 
+    def split_markdown_into_atomic_chunks(self, text: str) -> list[str]:
+        lines = text.splitlines()
+        chunks = []
+        
+        in_code_block = False
+        code_block_fence = ""
+        current_code_chunk = []
+        
+        current_table_chunk = []
+        current_list_chunk = []
+        current_prose_chunk = []
+        
+        def flush_prose():
+            nonlocal current_prose_chunk
+            if current_prose_chunk:
+                prose_text = "\n".join(current_prose_chunk).strip()
+                if prose_text:
+                    sentence_end = re.compile(
+                        r'(?<!\b[iI]\.[eE]\.)'
+                        r'(?<!\b[eE]\.[gG]\.)'
+                        r'(?<!\b[dD][rR]\.)'
+                        r'(?<!\b[aA]\.[mM]\.)'
+                        r'(?<!\b[pP]\.[mM]\.)'
+                        r'(?<!\b[vV][sS]\.)'
+                        r'(?<!\d\.)'
+                        r'(?<=\.|\?|!)\s+'
+                    )
+                    sentences = sentence_end.split(prose_text)
+                    for s in sentences:
+                        s_stripped = s.strip()
+                        if s_stripped:
+                            chunks.append(s_stripped)
+                current_prose_chunk = []
+                
+        def flush_table():
+            nonlocal current_table_chunk
+            if current_table_chunk:
+                table_text = "\n".join(current_table_chunk).strip()
+                if table_text:
+                    chunks.append(table_text)
+                current_table_chunk = []
+                
+        def flush_list():
+            nonlocal current_list_chunk
+            if current_list_chunk:
+                list_text = "\n".join(current_list_chunk).strip()
+                if list_text:
+                    chunks.append(list_text)
+                current_list_chunk = []
+
+        table_pattern = re.compile(r'^\s*\|')
+        list_pattern = re.compile(r'^\s*([*\-+]|\d+\.)\s+')
+        heading_pattern = re.compile(r'^\s*#+\s+')
+        
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            stripped = line.strip()
+            
+            if in_code_block:
+                current_code_chunk.append(line)
+                if stripped.startswith(code_block_fence):
+                    chunks.append("\n".join(current_code_chunk))
+                    in_code_block = False
+                    current_code_chunk = []
+                i += 1
+                continue
+                
+            if stripped.startswith("```") or stripped.startswith("~~~"):
+                flush_prose()
+                flush_table()
+                flush_list()
+                
+                in_code_block = True
+                code_block_fence = "```" if stripped.startswith("```") else "~~~"
+                current_code_chunk.append(line)
+                i += 1
+                continue
+                
+            if heading_pattern.match(line):
+                flush_prose()
+                flush_table()
+                flush_list()
+                chunks.append(stripped)
+                i += 1
+                continue
+                
+            if table_pattern.match(line):
+                flush_prose()
+                flush_list()
+                current_table_chunk.append(line)
+                i += 1
+                continue
+            elif current_table_chunk:
+                flush_table()
+                
+            if list_pattern.match(line):
+                flush_prose()
+                flush_table()
+                current_list_chunk.append(line)
+                i += 1
+                continue
+            elif current_list_chunk:
+                if line.startswith(" ") or line.startswith("\t") or stripped == "":
+                    current_list_chunk.append(line)
+                    i += 1
+                    continue
+                else:
+                    flush_list()
+                    
+            if stripped == "":
+                flush_prose()
+            else:
+                current_prose_chunk.append(line)
+                
+            i += 1
+            
+        flush_prose()
+        flush_table()
+        flush_list()
+        
+        return [c for c in chunks if c.strip()]
+
     def tokenize_sentences(self, text: str) -> list[str]:
-        # Clean regex-based sentence splitter avoiding splits on abbreviations
-        sentence_end = re.compile(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?|!)\s')
-        sentences = sentence_end.split(text.strip())
-        return [s.strip() for s in sentences if s.strip()]
+        return self.split_markdown_into_atomic_chunks(text)
 
     def count_tokens(self, text: str) -> int:
         return len(self.tokenizer.encode(text))

@@ -134,3 +134,37 @@ def test_sharp_semantic_pruning_limits(compressor):
     # Verify that the retained chunks count is <= 5
     retained_chunks = [c for c in result["chunks"] if c["retained"]]
     assert len(retained_chunks) <= 5
+
+def test_markdown_aware_chunker(compressor):
+    markdown_text = (
+        "# Heading 1\n"
+        "This is a prose paragraph describing something. It has multiple sentences.\n\n"
+        "```python\n"
+        "def hello_world():\n"
+        "    print('Hello')\n"
+        "```\n\n"
+        "| Col 1 | Col 2 |\n"
+        "|---|---|\n"
+        "| Val 1 | Val 2 |\n\n"
+        "- Item 1\n"
+        "- Item 2\n"
+        "  - Nested Item 2.1"
+    )
+    
+    chunks = compressor.split_markdown_into_atomic_chunks(markdown_text)
+    
+    # Confirm code block is kept intact
+    code_chunks = [ch for ch in chunks if "```" in ch]
+    assert len(code_chunks) == 1
+    assert "def hello_world():" in code_chunks[0]
+    
+    # Confirm table is kept intact
+    table_chunks = [ch for ch in chunks if "|" in ch]
+    assert len(table_chunks) == 1
+    assert "Col 1" in table_chunks[0]
+    assert "Val 2" in table_chunks[0]
+    
+    # Confirm list is kept intact
+    list_chunks = [ch for ch in chunks if "- Item 1" in ch]
+    assert len(list_chunks) == 1
+    assert "Nested Item 2.1" in list_chunks[0]
