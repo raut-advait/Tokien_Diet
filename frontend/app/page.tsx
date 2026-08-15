@@ -114,8 +114,12 @@ export default function TelemetryDashboard() {
   };
 
   const handleCopyComp = async () => {
-    if (data?.compressed_context_llm?.output) {
-      await navigator.clipboard.writeText(data.compressed_context_llm.output);
+    const textToCopy = data?.chunks
+      ? data.chunks.filter((chunk: any) => chunk.retained).map((chunk: any) => chunk.text).join('\n\n')
+      : (data?.compressed_context_llm?.output ?? "");
+      
+    if (textToCopy) {
+      await navigator.clipboard.writeText(textToCopy);
       setCopiedComp(true);
       setTimeout(() => setCopiedComp(false), 2000);
     }
@@ -389,6 +393,9 @@ export default function TelemetryDashboard() {
   const latencySaved = data ? Math.max(0, parseFloat(((data?.full_context_llm?.total_latency_ms ?? data?.full_context_llm?.latency_ms ?? 0) - (data?.compressed_context_llm?.total_latency_ms ?? data?.compressed_context_llm?.latency_ms ?? 0)).toFixed(1))) : 0;
   const tokensSaved = data ? Math.max(0, Math.floor(((data?.full_context?.length ?? 0) - (data?.compressed_context?.length ?? 0)) / 4)) : 0;
   const costSavings = (tokensSaved * 0.00000015).toFixed(6);
+  const retainedText = data?.chunks
+    ? data.chunks.filter((chunk: any) => chunk.retained).map((chunk: any) => chunk.text).join('\n\n')
+    : (data?.compressed_context_llm?.output ?? "");
 
   return (
     <div className="min-h-screen bg-zinc-950 text-foreground selection:bg-primary/30 selection:text-white flex flex-col font-sans">
@@ -935,7 +942,7 @@ export default function TelemetryDashboard() {
                             </div>
                           </div>
                           <p className="text-[11px] leading-relaxed text-zinc-100 flex-1 font-sans">
-                            {(data?.compressed_context_llm?.output ?? "")}
+                            {retainedText}
                           </p>
                         </div>
                       </div>
