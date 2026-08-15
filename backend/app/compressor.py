@@ -206,6 +206,9 @@ class ContextCompressor:
         latency_ms = (time.time() - start_time) * 1000
         
         return {
+            "original_text": context,
+            "compressed_text": compressed_context,
+            "chunks": sentence_diffs,
             "compressed_context": compressed_context,
             "original_tokens": original_tokens,
             "compressed_tokens": compressed_tokens,

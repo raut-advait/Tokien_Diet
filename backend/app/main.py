@@ -71,22 +71,24 @@ class SearchAndCompressRequest(BaseModel):
     dynamic_compression: bool | None = Field(None, example=True)
     model: str | None = Field("llama-3.1-8b-instant", example="llama-3.1-8b-instant")
 
-class LLMMetrics(BaseModel):
+class RAGMetrics(BaseModel):
+    text: str
     ttft_ms: float
-    total_latency_ms: float
-    output: str
-    tokens: int
+    latency_ms: float
+    input_tokens: int
+
+class ChunkDiff(BaseModel):
+    text: str
+    score: float
+    retained: bool
 
 class SearchAndCompressResponse(BaseModel):
-    query: str
-    full_context: str
-    compressed_context: str
-    compression_ratio: float
-    compression_latency_ms: float
-    retrieved_chunks: list[dict]
-    full_context_llm: LLMMetrics
-    compressed_context_llm: LLMMetrics
-    sentence_diffs: list[SentenceDiff]
+    original_tokens: int
+    compressed_tokens: int
+    compression_ratio: str
+    chunks: list[ChunkDiff]
+    full_rag: RAGMetrics
+    compressed_rag: RAGMetrics
 
 def synthesize_concise_answer(query: str, context: str) -> str:
     """
@@ -142,6 +144,14 @@ def query_groq_api(query: str, context: str, model: str = "llama-3.1-8b-instant"
     api_key = os.getenv("GROQ_API_KEY")
     prompt = f"Context: {context}\n\nQuery: {query}\n\nAnswer concisely based on context:"
     
+    # Calculate input tokens
+    import tiktoken
+    try:
+        tokenizer = tiktoken.get_encoding("cl100k_base")
+        input_tokens = len(tokenizer.encode(prompt))
+    except Exception:
+        input_tokens = len(prompt) // 4
+        
     if not api_key:
         # Generate a concise, fact-grounded synthesized RAG answer
         synthesized_output = synthesize_concise_answer(query, context)
@@ -154,9 +164,12 @@ def query_groq_api(query: str, context: str, model: str = "llama-3.1-8b-instant"
         time.sleep((simulated_ttft + simulated_generation) / 1000.0) # sleep to mimic delay
         
         return {
-            "ttft_ms": round(simulated_ttft, 2),
-            "total_latency_ms": round(simulated_ttft + simulated_generation, 2),
+            "text": synthesized_output,
             "output": synthesized_output,
+            "ttft_ms": round(simulated_ttft, 2),
+            "latency_ms": round(simulated_ttft + simulated_generation, 2),
+            "total_latency_ms": round(simulated_ttft + simulated_generation, 2),
+            "input_tokens": input_tokens,
             "tokens": len(synthesized_output) // 4
         }
         
@@ -192,27 +205,39 @@ def query_groq_api(query: str, context: str, model: str = "llama-3.1-8b-instant"
         # Estimate TTFT as time to headers (approx 70% of non-streamed time for Groq)
         ttft = total_time * 0.7
         
+        usage = resp_json.get("usage", {})
+        api_input_tokens = usage.get("prompt_tokens", input_tokens)
+        
         return {
-            "ttft_ms": round(ttft, 2),
-            "total_latency_ms": round(total_time, 2),
+            "text": output_text,
             "output": output_text,
-            "tokens": resp_json.get("usage", {}).get("total_tokens", 0)
+            "ttft_ms": round(ttft, 2),
+            "latency_ms": round(total_time, 2),
+            "total_latency_ms": round(total_time, 2),
+            "input_tokens": api_input_tokens,
+            "tokens": usage.get("completion_tokens", len(output_text) // 4)
         }
     except requests.exceptions.HTTPError as e:
         error_body = f" | Body: {e.response.text}" if e.response is not None else ""
         print(f"Groq API HTTP Error: {str(e)}{error_body}")
         return {
-            "ttft_ms": 150.0,
-            "total_latency_ms": 400.0,
+            "text": f"Error calling Groq API: {str(e)}{error_body}",
             "output": f"Error calling Groq API: {str(e)}{error_body}",
+            "ttft_ms": 150.0,
+            "latency_ms": 400.0,
+            "total_latency_ms": 400.0,
+            "input_tokens": input_tokens,
             "tokens": 0
         }
     except Exception as e:
         print(f"Groq API Error: {str(e)}")
         return {
-            "ttft_ms": 150.0,
-            "total_latency_ms": 400.0,
+            "text": f"Error calling Groq API: {str(e)}",
             "output": f"Error calling Groq API: {str(e)}",
+            "ttft_ms": 150.0,
+            "latency_ms": 400.0,
+            "total_latency_ms": 400.0,
+            "input_tokens": input_tokens,
             "tokens": 0
         }
 
@@ -291,16 +316,30 @@ async def search_and_compress_route(req: SearchAndCompressRequest):
         full_metrics = query_groq_api(sanitized_query, full_context, model=req_model)
         comp_metrics = query_groq_api(sanitized_query, compressed_context, model=req_model)
         
+        ratio_percent = f"{comp_result['compression_ratio'] * 100:.1f}%"
+        
+        chunks_diff = [
+            {"text": c["text"], "score": float(c["score"]), "retained": bool(c["retained"])}
+            for c in comp_result["sentence_diffs"]
+        ]
+        
         return {
-            "query": sanitized_query,
-            "full_context": full_context,
-            "compressed_context": compressed_context,
-            "compression_ratio": comp_result["compression_ratio"],
-            "compression_latency_ms": round(comp_latency_ms, 2),
-            "retrieved_chunks": chunks,
-            "full_context_llm": full_metrics,
-            "compressed_context_llm": comp_metrics,
-            "sentence_diffs": comp_result["sentence_diffs"]
+            "original_tokens": comp_result["original_tokens"],
+            "compressed_tokens": comp_result["compressed_tokens"],
+            "compression_ratio": ratio_percent,
+            "chunks": chunks_diff,
+            "full_rag": {
+                "text": full_metrics["text"],
+                "ttft_ms": full_metrics["ttft_ms"],
+                "latency_ms": full_metrics["latency_ms"],
+                "input_tokens": full_metrics["input_tokens"]
+            },
+            "compressed_rag": {
+                "text": comp_metrics["text"],
+                "ttft_ms": comp_metrics["ttft_ms"],
+                "latency_ms": comp_metrics["latency_ms"],
+                "input_tokens": comp_metrics["input_tokens"]
+            }
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
