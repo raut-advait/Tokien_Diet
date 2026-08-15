@@ -23,8 +23,7 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 # Active Groq Models:
-GROQ_MODEL = "	llama3-8b-8192"  # High quality
-# GROQ_MODEL = "llama-3.1-8b-instant"  # Ultra fast
+GROQ_MODEL = "llama-3.1-8b-instant"  # Active model
 
 # 4. Request / Response Schemas
 class SearchAndCompressRequest(BaseModel):

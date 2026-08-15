@@ -135,7 +135,7 @@ def synthesize_concise_answer(query: str, context: str) -> str:
 
 def query_groq_api(query: str, context: str) -> dict:
     """
-    Calls Groq API to run Llama-3-8B completions.
+    Calls Groq API to run Llama-3.1-8B completions.
     If GROQ_API_KEY is missing, runs a simulated response mirroring expected latency/TTFT.
     """
     api_key = os.getenv("GROQ_API_KEY")
@@ -165,10 +165,15 @@ def query_groq_api(query: str, context: str) -> dict:
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
+    
+    # Ensure prompt is non-empty
+    safe_prompt = prompt if prompt.strip() else "Provide a general greeting or overview."
+    
     data = {
-        "model": "llama3-8b-8192",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.0,
+        "model": "llama-3.1-8b-instant",
+        "messages": [{"role": "user", "content": safe_prompt}],
+        "temperature": 0.2,
+        "max_tokens": 1024,
         "stream": False
     }
     
@@ -189,7 +194,17 @@ def query_groq_api(query: str, context: str) -> dict:
             "output": output_text,
             "tokens": resp_json.get("usage", {}).get("total_tokens", 0)
         }
+    except requests.exceptions.HTTPError as e:
+        error_body = f" | Body: {e.response.text}" if e.response is not None else ""
+        print(f"Groq API HTTP Error: {str(e)}{error_body}")
+        return {
+            "ttft_ms": 150.0,
+            "total_latency_ms": 400.0,
+            "output": f"Error calling Groq API: {str(e)}{error_body}",
+            "tokens": 0
+        }
     except Exception as e:
+        print(f"Groq API Error: {str(e)}")
         return {
             "ttft_ms": 150.0,
             "total_latency_ms": 400.0,
