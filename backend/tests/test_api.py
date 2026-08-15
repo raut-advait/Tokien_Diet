@@ -45,12 +45,16 @@ def test_search_and_compress_endpoint():
     assert "text" in data["full_rag"]
     assert "ttft_ms" in data["full_rag"]
     assert "latency_ms" in data["full_rag"]
+    assert "total_latency_ms" in data["full_rag"]
     assert "input_tokens" in data["full_rag"]
+    assert "output_tokens" in data["full_rag"]
     
     assert "text" in data["compressed_rag"]
     assert "ttft_ms" in data["compressed_rag"]
     assert "latency_ms" in data["compressed_rag"]
+    assert "total_latency_ms" in data["compressed_rag"]
     assert "input_tokens" in data["compressed_rag"]
+    assert "output_tokens" in data["compressed_rag"]
     
     # Verify input token compression
     assert data["compressed_rag"]["input_tokens"] < data["full_rag"]["input_tokens"]

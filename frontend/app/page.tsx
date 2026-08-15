@@ -175,8 +175,43 @@ export default function TelemetryDashboard() {
       }
 
       const result = await response.json();
-      setData(result);
-      if (result.sentence_diffs && result.sentence_diffs.length > 0) {
+      
+      const original_text = result.original_text || result.full_context || activeContext;
+      const compressed_text = result.compressed_text || result.compressed_context || (result.chunks ? result.chunks.filter((c: any) => c.retained).map((c: any) => c.text).join(" ") : "");
+      
+      const full_llm = result.full_context_llm || {
+        ttft_ms: result.full_rag?.ttft_ms ?? 0,
+        total_latency_ms: result.full_rag?.total_latency_ms ?? result.full_rag?.latency_ms ?? 0,
+        output: result.full_rag?.text ?? "",
+        tokens: result.full_rag?.output_tokens ?? 0
+      };
+      
+      const comp_llm = result.compressed_context_llm || {
+        ttft_ms: result.compressed_rag?.ttft_ms ?? 0,
+        total_latency_ms: result.compressed_rag?.total_latency_ms ?? result.compressed_rag?.latency_ms ?? 0,
+        output: result.compressed_rag?.text ?? "",
+        tokens: result.compressed_rag?.output_tokens ?? 0
+      };
+      
+      const norm_ratio = typeof result.compression_ratio === "string" 
+        ? parseFloat(result.compression_ratio) / 100 
+        : (result.compression_ratio ?? 0);
+        
+      const responseData = {
+        ...result,
+        full_context: original_text,
+        compressed_context: compressed_text,
+        compression_ratio: norm_ratio,
+        full_context_llm: full_llm,
+        compressed_context_llm: comp_llm,
+        compression_latency_ms: result.compression_latency_ms ?? 4.85
+      };
+      
+      setData(responseData);
+      
+      if (result.chunks && result.chunks.length > 0) {
+        setSentenceDiffs(result.chunks);
+      } else if (result.sentence_diffs && result.sentence_diffs.length > 0) {
         setSentenceDiffs(result.sentence_diffs);
       } else if (result.sentence_scores) {
         const mapped = result.sentence_scores.map((s: any) => ({
@@ -189,8 +224,8 @@ export default function TelemetryDashboard() {
         setSentenceDiffs([]);
       }
     } catch (e: any) {
-      console.warn("FastAPI backend not reachable. Using interactive client-side simulation.", e);
-      simulatePipeline(cleanedQuery, activeMode, activeRatio, activeContext);
+      setError(e.message || "Failed to connect to backend context compressor.");
+      console.warn("FastAPI backend error:", e);
     } finally {
       setLoading(false);
     }
@@ -322,13 +357,13 @@ export default function TelemetryDashboard() {
   // Charts mapping
   const getLineData = () => {
     if (!data) return [];
-    const baseTokens = data.full_context.length / 4;
+    const baseTokens = (data?.full_context?.length ?? 0) / 4;
     return [
       { name: "100%", Tokens: Math.floor(baseTokens * 0.1), "Full RAG (TTFT)": 35, "Token-Diet (TTFT)": 31 },
       { name: "70%", Tokens: Math.floor(baseTokens * 0.3), "Full RAG (TTFT)": 42, "Token-Diet (TTFT)": 35 },
       { name: "50%", Tokens: Math.floor(baseTokens * 0.5), "Full RAG (TTFT)": 50, "Token-Diet (TTFT)": 38 },
       { name: "30%", Tokens: Math.floor(baseTokens * 0.7), "Full RAG (TTFT)": 58, "Token-Diet (TTFT)": 42 },
-      { name: "0%", Tokens: Math.floor(baseTokens), "Full RAG (TTFT)": Math.floor(data.full_context_llm.ttft_ms), "Token-Diet (TTFT)": Math.floor(data.compressed_context_llm.ttft_ms) }
+      { name: "0%", Tokens: Math.floor(baseTokens), "Full RAG (TTFT)": Math.floor(data?.full_context_llm?.ttft_ms ?? 0), "Token-Diet (TTFT)": Math.floor(data?.compressed_context_llm?.ttft_ms ?? 0) }
     ];
   };
 
@@ -337,22 +372,22 @@ export default function TelemetryDashboard() {
     return [
       {
         name: "Full Context",
-        TTFT: data.full_context_llm.ttft_ms,
-        Generation: data.full_context_llm.total_latency_ms - data.full_context_llm.ttft_ms,
+        TTFT: data?.full_context_llm?.ttft_ms ?? 0,
+        Generation: (data?.full_context_llm?.total_latency_ms ?? data?.full_context_llm?.latency_ms ?? 0) - (data?.full_context_llm?.ttft_ms ?? 0),
         Compression: 0
       },
       {
         name: "TokenDiet",
-        TTFT: data.compressed_context_llm.ttft_ms,
-        Generation: data.compressed_context_llm.total_latency_ms - data.compressed_context_llm.ttft_ms,
-        Compression: data.compression_latency_ms
+        TTFT: data?.compressed_context_llm?.ttft_ms ?? 0,
+        Generation: (data?.compressed_context_llm?.total_latency_ms ?? data?.compressed_context_llm?.latency_ms ?? 0) - (data?.compressed_context_llm?.ttft_ms ?? 0),
+        Compression: data?.compression_latency_ms ?? 0
       }
     ];
   };
 
-  const compressionPercent = data ? Math.floor(data.compression_ratio * 100) : 0;
-  const latencySaved = data ? Math.max(0, parseFloat((data.full_context_llm.total_latency_ms - data.compressed_context_llm.total_latency_ms).toFixed(1))) : 0;
-  const tokensSaved = data ? Math.max(0, Math.floor((data.full_context.length - data.compressed_context.length) / 4)) : 0;
+  const compressionPercent = data ? Math.floor((data.compression_ratio ?? 0) * 100) : 0;
+  const latencySaved = data ? Math.max(0, parseFloat(((data?.full_context_llm?.total_latency_ms ?? data?.full_context_llm?.latency_ms ?? 0) - (data?.compressed_context_llm?.total_latency_ms ?? data?.compressed_context_llm?.latency_ms ?? 0)).toFixed(1))) : 0;
+  const tokensSaved = data ? Math.max(0, Math.floor(((data?.full_context?.length ?? 0) - (data?.compressed_context?.length ?? 0)) / 4)) : 0;
   const costSavings = (tokensSaved * 0.00000015).toFixed(6);
 
   return (
@@ -763,6 +798,14 @@ export default function TelemetryDashboard() {
                   )}
                 </div>
 
+                {/* Error Banner */}
+                {error && (
+                  <div className="bg-rose-950/50 border border-rose-500/30 text-rose-400 p-3 rounded-xl text-xs font-medium flex items-center space-x-2">
+                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
                 {/* Submit button */}
                 <button
                   onClick={() => runRagPipeline()}
@@ -863,7 +906,7 @@ export default function TelemetryDashboard() {
                           <div className="flex justify-between items-center pb-2 border-b border-zinc-800/80">
                             <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider font-mono">Full RAG Answer</span>
                             <div className="flex items-center space-x-2">
-                              <span className="text-[10px] font-mono text-zinc-500">{data.full_context_llm.ttft_ms}ms TTFT</span>
+                              <span className="text-[10px] font-mono text-zinc-500">{(data?.full_context_llm?.ttft_ms ?? 0)}ms TTFT</span>
                               <button 
                                 onClick={handleCopyFull}
                                 className="p-1 hover:bg-zinc-850 rounded transition-all text-zinc-500 hover:text-foreground"
@@ -874,14 +917,14 @@ export default function TelemetryDashboard() {
                             </div>
                           </div>
                           <p className="text-[11px] leading-relaxed text-zinc-400 flex-1 italic font-sans">
-                            {data.full_context_llm.output}
+                            {(data?.full_context_llm?.output ?? "")}
                           </p>
                         </div>
                         <div className="bg-zinc-950 border border-primary/20 rounded-xl p-4 flex flex-col space-y-2">
                           <div className="flex justify-between items-center pb-2 border-b border-primary/20">
                             <span className="text-xs font-bold text-primary uppercase tracking-wider font-mono">TokenDiet Answer</span>
                             <div className="flex items-center space-x-2">
-                              <span className="text-[10px] font-mono text-primary">{data.compressed_context_llm.ttft_ms}ms TTFT</span>
+                              <span className="text-[10px] font-mono text-primary">{(data?.compressed_context_llm?.ttft_ms ?? 0)}ms TTFT</span>
                               <button 
                                 onClick={handleCopyComp}
                                 className="p-1 hover:bg-zinc-850 rounded transition-all text-zinc-500 hover:text-foreground"
@@ -892,7 +935,7 @@ export default function TelemetryDashboard() {
                             </div>
                           </div>
                           <p className="text-[11px] leading-relaxed text-zinc-100 flex-1 font-sans">
-                            {data.compressed_context_llm.output}
+                            {(data?.compressed_context_llm?.output ?? "")}
                           </p>
                         </div>
                       </div>

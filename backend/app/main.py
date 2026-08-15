@@ -75,7 +75,9 @@ class RAGMetrics(BaseModel):
     text: str
     ttft_ms: float
     latency_ms: float
+    total_latency_ms: float
     input_tokens: int
+    output_tokens: int
 
 class ChunkDiff(BaseModel):
     text: str
@@ -332,13 +334,17 @@ async def search_and_compress_route(req: SearchAndCompressRequest):
                 "text": full_metrics["text"],
                 "ttft_ms": full_metrics["ttft_ms"],
                 "latency_ms": full_metrics["latency_ms"],
-                "input_tokens": full_metrics["input_tokens"]
+                "total_latency_ms": full_metrics["total_latency_ms"],
+                "input_tokens": full_metrics["input_tokens"],
+                "output_tokens": full_metrics["tokens"]
             },
             "compressed_rag": {
                 "text": comp_metrics["text"],
                 "ttft_ms": comp_metrics["ttft_ms"],
                 "latency_ms": comp_metrics["latency_ms"],
-                "input_tokens": comp_metrics["input_tokens"]
+                "total_latency_ms": comp_metrics["total_latency_ms"],
+                "input_tokens": comp_metrics["input_tokens"],
+                "output_tokens": comp_metrics["tokens"]
             }
         }
     except Exception as e:
