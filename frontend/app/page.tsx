@@ -789,7 +789,7 @@ export default function TelemetryDashboard() {
                       value={customContext}
                       onChange={(e) => setCustomContext(e.target.value)}
                       placeholder="Paste your raw document or context here..."
-                      className={`w-full bg-zinc-950/80 border border-zinc-800 rounded-xl p-4 ${data ? "h-[220px]" : "h-[280px]"} font-mono text-xs focus:outline-none focus:border-primary text-zinc-100 pr-4 pb-12 custom-scrollbar`}
+                      className={`w-full bg-zinc-950/80 border border-zinc-800 rounded-xl p-4 ${data ? "h-[220px]" : "h-[280px]"} font-mono text-xs focus:outline-none focus:border-primary text-zinc-100 pr-4 pb-12 custom-scrollbar no-scrollbar`}
                     />
                     <div className="absolute bottom-3 right-3 text-[9px] font-mono text-zinc-500 bg-zinc-900/90 px-2 py-1 rounded border border-zinc-800 pointer-events-none select-none">
                       {customContext.length} chars | ~{Math.floor(customContext.length / 4)} tokens
@@ -920,7 +920,7 @@ export default function TelemetryDashboard() {
                         </div>
 
                         {/* HTML Inline Highlights Scored Diff */}
-                        <div className="min-h-[320px] max-h-[360px] bg-zinc-950 border border-zinc-800/80 rounded-xl p-5 font-sans text-xs leading-relaxed text-zinc-400 overflow-y-auto custom-scrollbar tech-border">
+                        <div className="min-h-[320px] max-h-[360px] bg-zinc-950 border border-zinc-800/80 rounded-xl p-5 font-sans text-xs leading-relaxed text-zinc-400 overflow-y-auto custom-scrollbar no-scrollbar tech-border">
                           {sentenceDiffs && sentenceDiffs.length > 0 ? (
                             <div className="space-y-4 leading-loose">
                               {sentenceDiffs.map((chunk: any, idx: number) => {
@@ -955,7 +955,7 @@ export default function TelemetryDashboard() {
                         {/* Side-by-side Comparative Answers */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {/* Full RAG (Baseline) Card */}
-                          <div className="bg-zinc-950 border border-zinc-800/80 rounded-xl p-4 flex flex-col space-y-2 justify-between">
+                          <div className="bg-zinc-950 border border-zinc-800/80 rounded-xl p-4 flex flex-col space-y-2 justify-between no-scrollbar">
                             <div>
                               <div className="flex justify-between items-center pb-2 border-b border-zinc-800/80 mb-2">
                                 <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider font-mono">Full RAG (Baseline)</span>
@@ -981,7 +981,7 @@ export default function TelemetryDashboard() {
                           </div>
 
                           {/* TokenDiet Answer (Optimized) Card */}
-                          <div className="bg-zinc-950 border border-primary/20 rounded-xl p-4 flex flex-col space-y-2 justify-between">
+                          <div className="bg-zinc-950 border border-primary/20 rounded-xl p-4 flex flex-col space-y-2 justify-between no-scrollbar">
                             <div>
                               <div className="flex justify-between items-center pb-2 border-b border-primary/20 mb-2">
                                 <span className="text-xs font-bold text-primary uppercase tracking-wider font-mono">TokenDiet Answer (Optimized)</span>
