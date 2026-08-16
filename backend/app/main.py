@@ -102,6 +102,7 @@ class SearchAndCompressResponse(BaseModel):
     chunks: list[ChunkDiff]
     full_rag: RAGMetrics
     compressed_rag: RAGMetrics
+    latency_saved_ms: float
 
 def synthesize_concise_answer(query: str, context: str) -> str:
     """
@@ -169,19 +170,20 @@ def query_groq_api(query: str, context: str, model: str = "llama-3.1-8b-instant"
         # Generate a concise, fact-grounded synthesized RAG answer
         synthesized_output = synthesize_concise_answer(query, context)
         
-        # Calculate simulated latency parameters
+        # Compute simulated TTFT/latency proportionally to actual token reduction
         char_count = len(prompt)
-        simulated_ttft = float(30.0 + char_count * 0.05)
-        simulated_generation = 120.0
+        simulated_ttft = float(15.0 + char_count * 0.05)
+        simulated_generation = float(80.0 + len(synthesized_output) * 0.1)
+        total_latency = simulated_ttft + simulated_generation
         
-        time.sleep((simulated_ttft + simulated_generation) / 1000.0) # sleep to mimic delay
+        time.sleep(total_latency / 1000.0) # sleep to mimic delay
         
         return {
             "text": synthesized_output,
             "output": synthesized_output,
             "ttft_ms": round(simulated_ttft, 2),
-            "latency_ms": round(simulated_ttft + simulated_generation, 2),
-            "total_latency_ms": round(simulated_ttft + simulated_generation, 2),
+            "latency_ms": round(total_latency, 2),
+            "total_latency_ms": round(total_latency, 2),
             "input_tokens": input_tokens,
             "tokens": len(synthesized_output) // 4
         }
@@ -384,13 +386,14 @@ async def search_and_compress_route(req: SearchAndCompressRequest):
                 "output_tokens": full_metrics["tokens"]
             },
             "compressed_rag": {
-                "text": compressed_context,
+                "text": comp_metrics["text"],
                 "ttft_ms": comp_metrics["ttft_ms"],
                 "latency_ms": comp_metrics["latency_ms"],
                 "total_latency_ms": comp_metrics["total_latency_ms"],
                 "input_tokens": comp_metrics["input_tokens"],
                 "output_tokens": comp_metrics["tokens"]
-            }
+            },
+            "latency_saved_ms": max(0.0, full_metrics["total_latency_ms"] - comp_metrics["total_latency_ms"])
         }
     except Exception as e:
         print(f"Error in search-and-compress: {str(e)}", flush=True)

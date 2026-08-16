@@ -114,12 +114,8 @@ export default function TelemetryDashboard() {
   };
 
   const handleCopyComp = async () => {
-    const textToCopy = data?.chunks
-      ? data.chunks.filter((chunk: any) => chunk.retained).map((chunk: any) => chunk.text).join('\n\n')
-      : (data?.compressed_context_llm?.output ?? "");
-      
-    if (textToCopy) {
-      await navigator.clipboard.writeText(textToCopy);
+    if (data?.compressed_context_llm?.output) {
+      await navigator.clipboard.writeText(data.compressed_context_llm.output);
       setCopiedComp(true);
       setTimeout(() => setCopiedComp(false), 2000);
     }
@@ -661,82 +657,82 @@ export default function TelemetryDashboard() {
             </div>
 
             {/* TIER 1: KPI Metrics Grid */}
-            <motion.div 
-              variants={containerVariants}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, margin: "-100px" }}
-              className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10"
-            >
-              {/* Metric 1 */}
+            {data && (
               <motion.div 
-                variants={cardVariants}
-                className="bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/80 hover:border-zinc-700 transition-all duration-300 rounded-2xl p-6 relative overflow-hidden tech-border glow-orange"
+                variants={containerVariants}
+                initial="hidden"
+                animate="show"
+                className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest font-mono">Context Compression</span>
-                  <TrendingDown className="w-4 h-4 text-primary" />
-                </div>
-                <div className="mt-4 flex items-baseline space-x-2">
-                  <span className="text-4xl font-bold tracking-tight font-mono text-primary">{compressionPercent}%</span>
-                  <span className="text-xs text-zinc-400">tokens saved</span>
-                </div>
-                <p className="text-[10px] text-zinc-500 mt-2 font-mono">Pruned redundant filler text</p>
-                <div className="absolute right-0 bottom-0 translate-x-4 translate-y-4 opacity-5 pointer-events-none text-primary">
-                  <Layers className="w-24 h-24" />
-                </div>
-              </motion.div>
+                {/* Metric 1 */}
+                <motion.div 
+                  variants={cardVariants}
+                  className="bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/80 hover:border-zinc-700 transition-all duration-300 rounded-2xl p-6 relative overflow-hidden tech-border glow-orange"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest font-mono">Context Compression</span>
+                    <TrendingDown className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="mt-4 flex items-baseline space-x-2">
+                    <span className="text-4xl font-bold tracking-tight font-mono text-primary">{compressionPercent}%</span>
+                    <span className="text-xs text-zinc-400">tokens saved</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-500 mt-2 font-mono">Pruned redundant filler text</p>
+                  <div className="absolute right-0 bottom-0 translate-x-4 translate-y-4 opacity-5 pointer-events-none text-primary">
+                    <Layers className="w-24 h-24" />
+                  </div>
+                </motion.div>
 
-              {/* Metric 2 */}
-              <motion.div 
-                variants={cardVariants}
-                className="bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/80 hover:border-zinc-700 transition-all duration-300 rounded-2xl p-6 relative overflow-hidden tech-border glow-orange"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest font-mono">Latency Saved</span>
-                  <Zap className="w-4 h-4 text-primary" />
-                </div>
-                <div className="mt-4 flex items-baseline space-x-2">
-                  <span className="text-4xl font-bold tracking-tight font-mono text-zinc-100">-{latencySaved} ms</span>
-                  <span className="text-xs text-zinc-400">TTFT speedup</span>
-                </div>
-                <p className="text-[10px] text-zinc-500 mt-2 font-mono">Saved downstream execution latency</p>
-                <div className="absolute right-0 bottom-0 translate-x-4 translate-y-4 opacity-5 pointer-events-none text-zinc-100">
-                  <Zap className="w-24 h-24" />
-                </div>
-              </motion.div>
+                {/* Metric 2 */}
+                <motion.div 
+                  variants={cardVariants}
+                  className="bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/80 hover:border-zinc-700 transition-all duration-300 rounded-2xl p-6 relative overflow-hidden tech-border glow-orange"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest font-mono">Latency Saved</span>
+                    <Zap className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="mt-4 flex items-baseline space-x-2">
+                    <span className="text-4xl font-bold tracking-tight font-mono text-zinc-100">-{latencySaved} ms</span>
+                    <span className="text-xs text-zinc-400">TTFT speedup</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-500 mt-2 font-mono">Saved downstream execution latency</p>
+                  <div className="absolute right-0 bottom-0 translate-x-4 translate-y-4 opacity-5 pointer-events-none text-zinc-100">
+                    <Zap className="w-24 h-24" />
+                  </div>
+                </motion.div>
 
-              {/* Metric 3 */}
-              <motion.div 
-                variants={cardVariants}
-                className="bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/80 hover:border-zinc-700 transition-all duration-300 rounded-2xl p-6 relative overflow-hidden tech-border glow-orange"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest font-mono">Est. Cost Reduction</span>
-                  <DollarSign className="w-4 h-4 text-primary" />
-                </div>
-                <div className="mt-4 flex items-baseline space-x-1">
-                  <span className="text-4xl font-bold tracking-tight font-mono text-primary">${costSavings}</span>
-                  <span className="text-xs text-zinc-400">per call</span>
-                </div>
-                <p className="text-[10px] text-zinc-500 mt-2 font-mono">Saved LLM prompt allocation bills</p>
-                <div className="absolute right-0 bottom-0 translate-x-4 translate-y-4 opacity-5 pointer-events-none text-primary">
-                  <DollarSign className="w-24 h-24" />
-                </div>
+                {/* Metric 3 */}
+                <motion.div 
+                  variants={cardVariants}
+                  className="bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/80 hover:border-zinc-700 transition-all duration-300 rounded-2xl p-6 relative overflow-hidden tech-border glow-orange"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest font-mono">Est. Cost Reduction</span>
+                    <DollarSign className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="mt-4 flex items-baseline space-x-1">
+                    <span className="text-4xl font-bold tracking-tight font-mono text-primary">${costSavings}</span>
+                    <span className="text-xs text-zinc-400">per call</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-500 mt-2 font-mono">Saved LLM prompt allocation bills</p>
+                  <div className="absolute right-0 bottom-0 translate-x-4 translate-y-4 opacity-5 pointer-events-none text-primary">
+                    <DollarSign className="w-24 h-24" />
+                  </div>
+                </motion.div>
               </motion.div>
-            </motion.div>
+            )}
 
-            {/* TIER 2: Main Workspace (2-Column Spacious Layout) */}
-            <div className="flex flex-col lg:flex-row gap-8 items-stretch">
+            {/* TIER 2: Main Workspace */}
+            <div className={data ? "flex flex-col lg:flex-row gap-8 items-stretch" : "max-w-3xl mx-auto w-full"}>
               
               {/* Left Column: Input & Config (45% Width) */}
               <motion.div 
                 layout
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5 }}
-                className="w-full lg:w-[45%] flex flex-col justify-between space-y-6 bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/80 hover:border-zinc-700 transition-all duration-300 rounded-2xl p-6 md:p-8 tech-border glow-orange"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className={`w-full ${data ? "lg:w-[45%]" : "w-full"} flex flex-col justify-between space-y-6 bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/80 hover:border-zinc-700 transition-all duration-300 rounded-2xl p-6 md:p-8 tech-border glow-orange`}
               >
                 <div className="flex items-center space-x-2 pb-3 border-b border-zinc-800/80">
                   <Settings className="w-4 h-4 text-primary" />
@@ -785,7 +781,7 @@ export default function TelemetryDashboard() {
                   />
                 </div>
 
-                {/* Raw Context Textarea with character/token counter overlay */}
+                {/* Raw Context Textarea */}
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-zinc-400 font-mono">Raw Context / Document Text</label>
                   <div className="relative">
@@ -793,7 +789,7 @@ export default function TelemetryDashboard() {
                       value={customContext}
                       onChange={(e) => setCustomContext(e.target.value)}
                       placeholder="Paste your raw document or context here..."
-                      className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl p-4 h-[260px] font-mono text-xs focus:outline-none focus:border-primary text-zinc-100 pr-4 pb-12 custom-scrollbar"
+                      className={`w-full bg-zinc-950/80 border border-zinc-800 rounded-xl p-4 ${data ? "h-[220px]" : "h-[280px]"} font-mono text-xs focus:outline-none focus:border-primary text-zinc-100 pr-4 pb-12 custom-scrollbar`}
                     />
                     <div className="absolute bottom-3 right-3 text-[9px] font-mono text-zinc-500 bg-zinc-900/90 px-2 py-1 rounded border border-zinc-800 pointer-events-none select-none">
                       {customContext.length} chars | ~{Math.floor(customContext.length / 4)} tokens
@@ -867,212 +863,221 @@ export default function TelemetryDashboard() {
                 </button>
               </motion.div>
 
-              {/* Right Column: Semantic Output & Answers (55% Width) */}
-              <motion.div 
-                layout
-                initial={{ opacity: 0, x: 20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5 }}
-                className="w-full lg:w-[55%] flex flex-col justify-between space-y-6 bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/80 hover:border-zinc-700 transition-all duration-300 rounded-2xl p-6 md:p-8 tech-border glow-orange"
-              >
-                <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80">
-                  <div className="flex items-center space-x-2">
-                    <Cpu className="w-4 h-4 text-primary" />
-                    <h3 className="text-xs font-bold tracking-wide uppercase font-mono text-zinc-300">Context Semantic Pruner</h3>
+              {/* Right Column: Semantic Output & Answers (55% Width, visible when executing or when results exist) */}
+              {(loading || data || error) && (
+                <motion.div 
+                  layout
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="w-full lg:w-[55%] flex flex-col justify-between space-y-6 bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/80 hover:border-zinc-700 transition-all duration-300 rounded-2xl p-6 md:p-8 tech-border glow-orange"
+                >
+                  <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80">
+                    <div className="flex items-center space-x-2">
+                      <Cpu className="w-4 h-4 text-primary" />
+                      <h3 className="text-xs font-bold tracking-wide uppercase font-mono text-zinc-300">Context Semantic Pruner</h3>
+                    </div>
+                    {data && (
+                      <div className="flex space-x-4 text-[10px] font-mono text-zinc-400">
+                        <span>Original: <b className="text-zinc-100">{data.full_context.length}</b> chars</span>
+                        <span>Compressed: <b className="text-primary">{data.compressed_context.length}</b> chars</span>
+                      </div>
+                    )}
                   </div>
-                  {data && (
-                    <div className="flex space-x-4 text-[10px] font-mono text-zinc-400">
-                      <span>Original: <b className="text-zinc-100">{data.full_context.length}</b> chars</span>
-                      <span>Compressed: <b className="text-primary">{data.compressed_context.length}</b> chars</span>
-                    </div>
-                  )}
-                </div>
 
-                {/* Main Visualizer Diff with custom height */}
-                <div className="flex-1 flex flex-col space-y-4">
-                  {loading ? (
-                    <div className="flex-1 min-h-[320px] flex flex-col items-center justify-center space-y-2 text-zinc-500">
-                      <RefreshCw className="w-8 h-8 animate-spin text-primary" />
-                      <span className="text-xs">Scoring sentences & rendering LLM outputs...</span>
-                    </div>
-                  ) : data ? (
-                    <div className="flex-1 flex flex-col space-y-4">
-                      
-                      {/* Legend */}
-                      <div className="flex space-x-4 bg-zinc-950 border border-zinc-800/80 p-2.5 rounded-xl justify-center text-[10px] font-mono">
-                        <div className="flex items-center space-x-1.5">
-                          <span className="w-2.5 h-2.5 rounded bg-emerald-950 border border-emerald-500/40" />
-                          <span className="text-primary font-semibold">Retained (Emerald Glow)</span>
-                        </div>
-                        <div className="flex items-center space-x-1.5">
-                          <span className="w-2.5 h-2.5 rounded bg-rose-950 border border-rose-500/40" />
-                          <span className="text-rose-400/60 font-semibold line-through">Pruned Filler (Rose)</span>
-                        </div>
+                  {/* Main Visualizer Diff */}
+                  <div className="flex-1 flex flex-col space-y-4">
+                    {loading ? (
+                      <div className="flex-1 min-h-[320px] flex flex-col items-center justify-center space-y-2 text-zinc-500">
+                        <RefreshCw className="w-8 h-8 animate-spin text-primary" />
+                        <span className="text-xs">Scoring sentences & rendering LLM outputs...</span>
                       </div>
-
-                      {/* HTML Inline Highlights Scored Diff */}
-                      <div className="min-h-[320px] max-h-[360px] bg-zinc-950 border border-zinc-800/80 rounded-xl p-5 font-sans text-xs leading-relaxed text-zinc-400 overflow-y-auto custom-scrollbar tech-border">
-                        {sentenceDiffs && sentenceDiffs.length > 0 ? (
-                          <div className="space-y-4 leading-loose">
-                            {sentenceDiffs.map((chunk: any, idx: number) => {
-                              if (chunk.retained) {
-                                return (
-                                  <span 
-                                    key={idx} 
-                                    className="bg-emerald-950/70 border-b border-emerald-500/40 text-emerald-300 px-1.5 py-0.5 rounded-md mr-1.5 inline-block shadow-sm transition-all"
-                                    title={`Score: ${chunk.score.toFixed(2)}`}
-                                  >
-                                    {chunk.text}
-                                  </span>
-                                );
-                              } else {
-                                return (
-                                  <span 
-                                    key={idx} 
-                                    className="bg-rose-950/40 text-rose-400/60 line-through px-1 py-0.5 rounded mr-1 inline"
-                                    title={`Score: ${chunk.score.toFixed(2)}`}
-                                  >
-                                    {chunk.text}
-                                  </span>
-                                );
-                              }
-                            })}
+                    ) : error ? (
+                      <div className="flex-1 min-h-[320px] flex flex-col items-center justify-center space-y-4 text-rose-400 bg-rose-950/20 border border-rose-900/50 rounded-xl p-6">
+                        <div className="w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 text-xl font-bold font-mono">!</div>
+                        <h4 className="text-sm font-bold uppercase tracking-wider font-mono text-rose-300">Pipeline Error</h4>
+                        <p className="text-xs text-center max-w-md leading-relaxed text-rose-400/80">{error}</p>
+                        <button
+                          onClick={() => runRagPipeline()}
+                          className="px-4 py-2 rounded-lg bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 text-xs font-semibold font-mono tracking-wide text-rose-300 transition-all"
+                        >
+                          Retry Pipeline
+                        </button>
+                      </div>
+                    ) : data ? (
+                      <div className="flex-1 flex flex-col space-y-4">
+                        
+                        {/* Legend */}
+                        <div className="flex space-x-4 bg-zinc-950 border border-zinc-800/80 p-2.5 rounded-xl justify-center text-[10px] font-mono">
+                          <div className="flex items-center space-x-1.5">
+                            <span className="w-2.5 h-2.5 rounded bg-emerald-950 border border-emerald-500/40" />
+                            <span className="text-primary font-semibold">Retained (Emerald Glow)</span>
                           </div>
-                        ) : (
-                          <p className="italic text-center text-zinc-500">No text to compress.</p>
-                        )}
-                      </div>
+                          <div className="flex items-center space-x-1.5">
+                            <span className="w-2.5 h-2.5 rounded bg-rose-950 border border-rose-500/40" />
+                            <span className="text-rose-400/60 font-semibold line-through">Pruned Filler (Rose)</span>
+                          </div>
+                        </div>
 
-                      {/* Side-by-side Comparative Answers */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-zinc-950 border border-zinc-800/80 rounded-xl p-4 flex flex-col space-y-2">
-                          <div className="flex justify-between items-center pb-2 border-b border-zinc-800/80">
-                            <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider font-mono">Full RAG Answer</span>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-[10px] font-mono text-zinc-500">{(data?.full_context_llm?.ttft_ms ?? 0)}ms TTFT</span>
-                              <button 
-                                onClick={handleCopyFull}
-                                className="p-1 hover:bg-zinc-850 rounded transition-all text-zinc-500 hover:text-foreground"
-                                title="Copy Answer"
-                              >
-                                {copiedFull ? <span className="text-[9px] font-mono text-primary font-bold">Copied!</span> : <Copy className="w-3.5 h-3.5" />}
-                              </button>
+                        {/* HTML Inline Highlights Scored Diff */}
+                        <div className="min-h-[320px] max-h-[360px] bg-zinc-950 border border-zinc-800/80 rounded-xl p-5 font-sans text-xs leading-relaxed text-zinc-400 overflow-y-auto custom-scrollbar tech-border">
+                          {sentenceDiffs && sentenceDiffs.length > 0 ? (
+                            <div className="space-y-4 leading-loose">
+                              {sentenceDiffs.map((chunk: any, idx: number) => {
+                                if (chunk.retained) {
+                                  return (
+                                    <span 
+                                      key={idx} 
+                                      className="bg-emerald-950/70 border-b border-emerald-500/40 text-emerald-300 px-1.5 py-0.5 rounded-md mr-1.5 inline-block shadow-sm transition-all"
+                                      title={`Score: ${chunk.score.toFixed(2)}`}
+                                    >
+                                      {chunk.text}
+                                    </span>
+                                  );
+                                } else {
+                                  return (
+                                    <span 
+                                      key={idx} 
+                                      className="bg-rose-950/40 text-rose-400/60 line-through px-1 py-0.5 rounded mr-1 inline"
+                                      title={`Score: ${chunk.score.toFixed(2)}`}
+                                    >
+                                      {chunk.text}
+                                    </span>
+                                  );
+                                }
+                              })}
+                            </div>
+                          ) : (
+                            <p className="italic text-center text-zinc-500">No text to compress.</p>
+                          )}
+                        </div>
+
+                        {/* Side-by-side Comparative Answers */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Full RAG (Baseline) Card */}
+                          <div className="bg-zinc-950 border border-zinc-800/80 rounded-xl p-4 flex flex-col space-y-2 justify-between">
+                            <div>
+                              <div className="flex justify-between items-center pb-2 border-b border-zinc-800/80 mb-2">
+                                <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider font-mono">Full RAG (Baseline)</span>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-[10px] font-mono text-zinc-500">{(data?.full_context_llm?.ttft_ms ?? 0)}ms TTFT</span>
+                                  <button 
+                                    onClick={handleCopyFull}
+                                    className="p-1 hover:bg-zinc-850 rounded transition-all text-zinc-500 hover:text-foreground"
+                                    title="Copy Answer"
+                                  >
+                                    {copiedFull ? <span className="text-[9px] font-mono text-primary font-bold">Copied!</span> : <Copy className="w-3.5 h-3.5" />}
+                                  </button>
+                                </div>
+                              </div>
+                              <p className="text-[11px] leading-relaxed text-zinc-400 italic font-sans">
+                                {(data?.full_context_llm?.output ?? "")}
+                              </p>
+                            </div>
+                            <div className="flex justify-between items-center text-[9px] text-zinc-500 mt-2 pt-2 border-t border-zinc-900 font-mono">
+                              <span>Tokens: {data?.full_context_llm?.input_tokens ?? 0} in / {data?.full_context_llm?.tokens ?? 0} out</span>
+                              <span>Latency: {data?.full_context_llm?.total_latency_ms ?? 0}ms</span>
                             </div>
                           </div>
-                          <p className="text-[11px] leading-relaxed text-zinc-400 flex-1 italic font-sans">
-                            {(data?.full_context_llm?.output ?? "")}
-                          </p>
-                        </div>
-                        <div className="bg-zinc-950 border border-primary/20 rounded-xl p-4 flex flex-col space-y-2">
-                          <div className="flex justify-between items-center pb-2 border-b border-primary/20">
-                            <span className="text-xs font-bold text-primary uppercase tracking-wider font-mono">TokenDiet Answer</span>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-[10px] font-mono text-primary">{(data?.compressed_context_llm?.ttft_ms ?? 0)}ms TTFT</span>
-                              <button 
-                                onClick={handleCopyComp}
-                                className="p-1 hover:bg-zinc-850 rounded transition-all text-zinc-500 hover:text-foreground"
-                                title="Copy Answer"
-                              >
-                                {copiedComp ? <span className="text-[9px] font-mono text-primary font-bold">Copied!</span> : <Copy className="w-3.5 h-3.5 text-primary" />}
-                              </button>
+
+                          {/* TokenDiet Answer (Optimized) Card */}
+                          <div className="bg-zinc-950 border border-primary/20 rounded-xl p-4 flex flex-col space-y-2 justify-between">
+                            <div>
+                              <div className="flex justify-between items-center pb-2 border-b border-primary/20 mb-2">
+                                <span className="text-xs font-bold text-primary uppercase tracking-wider font-mono">TokenDiet Answer (Optimized)</span>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-[10px] font-mono text-primary">{(data?.compressed_context_llm?.ttft_ms ?? 0)}ms TTFT</span>
+                                  <button 
+                                    onClick={handleCopyComp}
+                                    className="p-1 hover:bg-zinc-850 rounded transition-all text-zinc-500 hover:text-foreground"
+                                    title="Copy Answer"
+                                  >
+                                    {copiedComp ? <span className="text-[9px] font-mono text-primary font-bold">Copied!</span> : <Copy className="w-3.5 h-3.5 text-primary" />}
+                                  </button>
+                                </div>
+                              </div>
+                              <p className="text-[11px] leading-relaxed text-zinc-100 font-sans">
+                                {(data?.compressed_context_llm?.output ?? "")}
+                              </p>
+                            </div>
+                            <div className="flex justify-between items-center text-[9px] text-primary mt-2 pt-2 border-t border-primary/10 font-mono">
+                              <span>Tokens: {data?.compressed_context_llm?.input_tokens ?? 0} in / {data?.compressed_context_llm?.tokens ?? 0} out</span>
+                              <span>Latency: {data?.compressed_context_llm?.total_latency_ms ?? 0}ms</span>
                             </div>
                           </div>
-                          <p className="text-[11px] leading-relaxed text-zinc-100 flex-1 font-sans">
-                            {retainedText}
-                          </p>
                         </div>
+
                       </div>
-
-                    </div>
-                  ) : error ? (
-                    <div className="flex-1 min-h-[320px] flex flex-col items-center justify-center space-y-4 text-rose-400 bg-rose-950/20 border border-rose-900/50 rounded-xl p-6">
-                      <div className="w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 text-xl font-bold font-mono">!</div>
-                      <h4 className="text-sm font-bold uppercase tracking-wider font-mono text-rose-300">Pipeline Error</h4>
-                      <p className="text-xs text-center max-w-md leading-relaxed text-rose-400/80">{error}</p>
-                      <button
-                        onClick={() => runRagPipeline()}
-                        className="px-4 py-2 rounded-lg bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 text-xs font-semibold font-mono tracking-wide text-rose-300 transition-all"
-                      >
-                        Retry Pipeline
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex-1 min-h-[320px] flex items-center justify-center text-zinc-500">
-                      <p className="text-xs">No metrics fetched. Click Compress to run RAG.</p>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-
-            </div>
-
-            {/* TIER 3: Stacked RAG Telemetry Drawer */}
-            <div className="mt-10 pt-8 border-t border-zinc-800/80 w-full">
-              <div className="flex items-center space-x-2 mb-6">
-                <BarChart2 className="w-5 h-5 text-primary" />
-                <h3 className="text-sm font-bold tracking-wide uppercase font-mono text-zinc-100">RAG Optimization Profiler</h3>
-              </div>
+                    ) : null}
+                  </div>
+                </motion.div>
+              )}
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                
-                {/* Line Chart Card */}
-                <div className="bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/80 rounded-2xl p-6 tech-border glow-orange flex flex-col justify-between">
-                  <div className="mb-4">
-                    <h4 className="text-xs font-bold text-zinc-300 uppercase font-mono">TTFT Latency vs. Context Length</h4>
-                    <p className="text-[10px] text-zinc-500 mt-1 font-sans">Visualizes TTFT savings across context token size reductions.</p>
-                  </div>
-                  <div className="h-[220px] w-full bg-zinc-950 border border-zinc-800/80 rounded-xl p-3">
-                    {data ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={getLineData()} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                          <CartesianGrid stroke="#1f1f23" strokeDasharray="3 3" />
-                          <XAxis dataKey="Tokens" stroke="#a1a1aa" fontSize={9} />
-                          <YAxis stroke="#a1a1aa" fontSize={9} />
-                          <Tooltip contentStyle={{ backgroundColor: "#0d0d0d", borderColor: "#16a34a", fontSize: 10 }} />
-                          <Line type="monotone" dataKey="Full RAG (TTFT)" stroke="#71717a" strokeWidth={1.5} dot={{ r: 2 }} />
-                          <Line type="monotone" dataKey="Token-Diet (TTFT)" stroke="#16a34a" strokeWidth={2} dot={{ r: 3 }} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[10px] text-zinc-500 font-mono">No data plotted</div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Bar Chart Card */}
-                <div className="bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/80 rounded-2xl p-6 tech-border glow-orange flex flex-col justify-between">
-                  <div className="mb-4">
-                    <h4 className="text-xs font-bold text-zinc-300 uppercase font-mono">Latency Breakdown (ms)</h4>
-                    <p className="text-[10px] text-zinc-500 mt-1 font-sans">Granular millisecond breakdown of compression + generation stages.</p>
-                  </div>
-                  <div className="h-[220px] w-full bg-zinc-950 border border-zinc-800/80 rounded-xl p-3">
-                    {data ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={getBarData()} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                          <CartesianGrid stroke="#1f1f23" strokeDasharray="3 3" />
-                          <XAxis dataKey="name" stroke="#a1a1aa" fontSize={9} />
-                          <YAxis stroke="#a1a1aa" fontSize={9} />
-                          <Tooltip contentStyle={{ backgroundColor: "#0d0d0d", borderColor: "#16a34a", fontSize: 10 }} />
-                          <Bar dataKey="Compression" stackId="a" fill="#3f3f46" />
-                          <Bar dataKey="TTFT" stackId="a" fill="#16a34a" />
-                          <Bar dataKey="Generation" stackId="a" fill="#d97706" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[10px] text-zinc-500 font-mono">No data plotted</div>
-                    )}
-                  </div>
-                  <div className="flex justify-center space-x-4 text-[10px] text-zinc-400 pt-2 font-mono">
-                    <span className="flex items-center space-x-1.5"><span className="w-2.5 h-2.5 bg-[#3f3f46] rounded-sm" /> <span>Compression</span></span>
-                    <span className="flex items-center space-x-1.5"><span className="w-2.5 h-2.5 bg-[#16a34a] rounded-sm" /> <span>TTFT</span></span>
-                    <span className="flex items-center space-x-1.5"><span className="w-2.5 h-2.5 bg-[#d97706] rounded-sm" /> <span>Generation</span></span>
-                  </div>
-                </div>
-
-              </div>
             </div>
 
+            {/* TIER 3: Technical Deep-Dive accordion */}
+            {data && (
+              <details className="mt-10 pt-6 border-t border-zinc-800/80 w-full group">
+                <summary className="flex items-center justify-between cursor-pointer list-none select-none text-sm font-bold tracking-wide uppercase font-mono text-zinc-400 hover:text-foreground transition-colors py-2">
+                  <div className="flex items-center space-x-2">
+                    <BarChart2 className="w-5 h-5 text-primary" />
+                    <span>Show Technical Breakdown & Benchmarks</span>
+                  </div>
+                  <span className="text-zinc-500 group-open:rotate-180 transition-transform duration-200">▼</span>
+                </summary>
+                <div className="mt-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    
+                    {/* Line Chart Card */}
+                    <div className="bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/80 rounded-2xl p-6 tech-border glow-orange flex flex-col justify-between">
+                      <div className="mb-4">
+                        <h4 className="text-xs font-bold text-zinc-300 uppercase font-mono">TTFT Latency vs. Context Length</h4>
+                        <p className="text-[10px] text-zinc-500 mt-1 font-sans">Visualizes TTFT savings across context token size reductions.</p>
+                      </div>
+                      <div className="h-[220px] w-full bg-zinc-950 border border-zinc-800/80 rounded-xl p-3">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={getLineData()} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                            <CartesianGrid stroke="#1f1f23" strokeDasharray="3 3" />
+                            <XAxis dataKey="Tokens" stroke="#a1a1aa" fontSize={9} />
+                            <YAxis stroke="#a1a1aa" fontSize={9} />
+                            <Tooltip contentStyle={{ backgroundColor: "#0d0d0d", borderColor: "#16a34a", fontSize: 10 }} />
+                            <Line type="monotone" dataKey="Full RAG (TTFT)" stroke="#71717a" strokeWidth={1.5} dot={{ r: 2 }} />
+                            <Line type="monotone" dataKey="Token-Diet (TTFT)" stroke="#16a34a" strokeWidth={2} dot={{ r: 3 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    {/* Bar Chart Card */}
+                    <div className="bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/80 rounded-2xl p-6 tech-border glow-orange flex flex-col justify-between">
+                      <div className="mb-4">
+                        <h4 className="text-xs font-bold text-zinc-300 uppercase font-mono">Latency Breakdown (ms)</h4>
+                        <p className="text-[10px] text-zinc-500 mt-1 font-sans">Granular millisecond breakdown of compression + generation stages.</p>
+                      </div>
+                      <div className="h-[220px] w-full bg-zinc-950 border border-zinc-800/80 rounded-xl p-3">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={getBarData()} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
+                            <CartesianGrid stroke="#1f1f23" strokeDasharray="3 3" />
+                            <XAxis dataKey="name" stroke="#a1a1aa" fontSize={9} />
+                            <YAxis stroke="#a1a1aa" fontSize={9} />
+                            <Tooltip contentStyle={{ backgroundColor: "#0d0d0d", borderColor: "#16a34a", fontSize: 10 }} />
+                            <Bar dataKey="Compression" stackId="a" fill="#3f3f46" />
+                            <Bar dataKey="TTFT" stackId="a" fill="#16a34a" />
+                            <Bar dataKey="Generation" stackId="a" fill="#d97706" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="flex justify-center space-x-4 text-[10px] text-zinc-400 pt-2 font-mono">
+                        <span className="flex items-center space-x-1.5"><span className="w-2.5 h-2.5 bg-[#3f3f46] rounded-sm" /> <span>Compression</span></span>
+                        <span className="flex items-center space-x-1.5"><span className="w-2.5 h-2.5 bg-[#16a34a] rounded-sm" /> <span>TTFT</span></span>
+                        <span className="flex items-center space-x-1.5"><span className="w-2.5 h-2.5 bg-[#d97706] rounded-sm" /> <span>Generation</span></span>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              </details>
+            )}
           </div>
         </motion.section>
 
