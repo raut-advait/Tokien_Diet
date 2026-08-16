@@ -174,32 +174,41 @@ export default function TelemetryDashboard() {
         })
       });
 
-      if (!response.ok) {
-        throw new Error(`API returned error: ${response.statusText}`);
+      let data: any = null;
+      try {
+        data = await response.json();
+      } catch (err) {
+        // Ignore json parse error here, handle below if response was not ok
       }
 
-      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.detail || `API returned error: ${response.statusText}`);
+      }
+
+      const result = data;
       
-      const original_text = result.original_text || result.full_context || activeContext;
-      const compressed_text = result.compressed_text || result.compressed_context || (result.chunks ? result.chunks.filter((c: any) => c.retained).map((c: any) => c.text).join(" ") : "");
+      const original_text = result?.original_text || result?.full_context || activeContext;
+      const compressed_text = result?.compressed_text || result?.compressed_context || (result?.chunks ? result.chunks.filter((c: any) => c.retained).map((c: any) => c.text).join(" ") : "");
       
-      const full_llm = result.full_context_llm || {
-        ttft_ms: result.full_rag?.ttft_ms ?? 0,
-        total_latency_ms: result.full_rag?.total_latency_ms ?? result.full_rag?.latency_ms ?? 0,
-        output: result.full_rag?.text ?? "",
-        tokens: result.full_rag?.output_tokens ?? 0
+      const full_llm = result?.full_context_llm || {
+        ttft_ms: result?.full_rag?.ttft_ms ?? 0,
+        total_latency_ms: result?.full_rag?.total_latency_ms ?? 0,
+        output: result?.full_rag?.text ?? "",
+        tokens: result?.full_rag?.output_tokens ?? 0,
+        input_tokens: result?.full_rag?.input_tokens ?? 0
       };
       
-      const comp_llm = result.compressed_context_llm || {
-        ttft_ms: result.compressed_rag?.ttft_ms ?? 0,
-        total_latency_ms: result.compressed_rag?.total_latency_ms ?? result.compressed_rag?.latency_ms ?? 0,
-        output: result.compressed_rag?.text ?? "",
-        tokens: result.compressed_rag?.output_tokens ?? 0
+      const comp_llm = result?.compressed_context_llm || {
+        ttft_ms: result?.compressed_rag?.ttft_ms ?? 0,
+        total_latency_ms: result?.compressed_rag?.total_latency_ms ?? 0,
+        output: result?.compressed_rag?.text ?? "",
+        tokens: result?.compressed_rag?.output_tokens ?? 0,
+        input_tokens: result?.compressed_rag?.input_tokens ?? 0
       };
       
-      const norm_ratio = typeof result.compression_ratio === "string" 
+      const norm_ratio = typeof result?.compression_ratio === "string" 
         ? parseFloat(result.compression_ratio) / 100 
-        : (result.compression_ratio ?? 0);
+        : (result?.compression_ratio ?? 0);
         
       const responseData = {
         ...result,
@@ -208,16 +217,16 @@ export default function TelemetryDashboard() {
         compression_ratio: norm_ratio,
         full_context_llm: full_llm,
         compressed_context_llm: comp_llm,
-        compression_latency_ms: result.compression_latency_ms ?? 4.85
+        compression_latency_ms: result?.compression_latency_ms ?? 4.85
       };
       
       setData(responseData);
       
-      if (result.chunks && result.chunks.length > 0) {
+      if (result?.chunks && result.chunks.length > 0) {
         setSentenceDiffs(result.chunks);
-      } else if (result.sentence_diffs && result.sentence_diffs.length > 0) {
+      } else if (result?.sentence_diffs && result.sentence_diffs.length > 0) {
         setSentenceDiffs(result.sentence_diffs);
-      } else if (result.sentence_scores) {
+      } else if (result?.sentence_scores) {
         const mapped = result.sentence_scores.map((s: any) => ({
           text: s.sentence || s.text,
           retained: s.retained,
@@ -373,25 +382,53 @@ export default function TelemetryDashboard() {
 
   const getBarData = () => {
     if (!data) return [];
+    
+    const fullTTFT = data?.full_context_llm?.ttft_ms ?? 0;
+    const fullTotal = data?.full_context_llm?.total_latency_ms ?? data?.full_context_llm?.latency_ms ?? 0;
+    const fullGen = Math.max(0, fullTotal - fullTTFT);
+
+    const compTTFT = data?.compressed_context_llm?.ttft_ms ?? 0;
+    const compTotal = data?.compressed_context_llm?.total_latency_ms ?? data?.compressed_context_llm?.latency_ms ?? 0;
+    const compGen = Math.max(0, compTotal - compTTFT);
+
     return [
       {
         name: "Full Context",
-        TTFT: data?.full_context_llm?.ttft_ms ?? 0,
-        Generation: (data?.full_context_llm?.total_latency_ms ?? data?.full_context_llm?.latency_ms ?? 0) - (data?.full_context_llm?.ttft_ms ?? 0),
+        TTFT: fullTTFT,
+        Generation: fullGen,
         Compression: 0
       },
       {
         name: "TokenDiet",
-        TTFT: data?.compressed_context_llm?.ttft_ms ?? 0,
-        Generation: (data?.compressed_context_llm?.total_latency_ms ?? data?.compressed_context_llm?.latency_ms ?? 0) - (data?.compressed_context_llm?.ttft_ms ?? 0),
+        TTFT: compTTFT,
+        Generation: compGen,
         Compression: data?.compression_latency_ms ?? 0
       }
     ];
   };
 
-  const compressionPercent = data ? Math.floor((data.compression_ratio ?? 0) * 100) : 0;
-  const latencySaved = data ? Math.max(0, parseFloat(((data?.full_context_llm?.total_latency_ms ?? data?.full_context_llm?.latency_ms ?? 0) - (data?.compressed_context_llm?.total_latency_ms ?? data?.compressed_context_llm?.latency_ms ?? 0)).toFixed(1))) : 0;
-  const tokensSaved = data ? Math.max(0, Math.floor(((data?.full_context?.length ?? 0) - (data?.compressed_context?.length ?? 0)) / 4)) : 0;
+  const compressionPercent = data 
+    ? Math.max(0, Math.min(100, Math.floor((data.compression_ratio ?? 0) * 100))) 
+    : 0;
+
+  // Guard latency comparison and savings percentage math against division by zero and undefined values
+  const fullTotalLatency = data?.full_context_llm?.total_latency_ms ?? data?.full_context_llm?.latency_ms ?? 0;
+  const compTotalLatency = data?.compressed_context_llm?.total_latency_ms ?? data?.compressed_context_llm?.latency_ms ?? 0;
+  
+  const latencySaved = data ? Math.max(0, parseFloat((fullTotalLatency - compTotalLatency).toFixed(1))) : 0;
+  
+  const latencySavingsPercent = data && fullTotalLatency > 0
+    ? Math.max(0, Math.min(100, Math.round(((fullTotalLatency - compTotalLatency) / fullTotalLatency) * 100)))
+    : 0;
+
+  const fullLength = data?.full_context?.length ?? 0;
+  const compLength = data?.compressed_context?.length ?? 0;
+  const tokensSaved = data ? Math.max(0, Math.floor((fullLength - compLength) / 4)) : 0;
+  
+  const tokenSavingsPercent = data && fullLength > 0
+    ? Math.max(0, Math.min(100, Math.round(((fullLength - compLength) / fullLength) * 100)))
+    : 0;
+
   const costSavings = (tokensSaved * 0.00000015).toFixed(6);
   const retainedText = data?.chunks
     ? data.chunks.filter((chunk: any) => chunk.retained).map((chunk: any) => chunk.text).join('\n\n')
@@ -947,6 +984,18 @@ export default function TelemetryDashboard() {
                         </div>
                       </div>
 
+                    </div>
+                  ) : error ? (
+                    <div className="flex-1 min-h-[320px] flex flex-col items-center justify-center space-y-4 text-rose-400 bg-rose-950/20 border border-rose-900/50 rounded-xl p-6">
+                      <div className="w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500 text-xl font-bold font-mono">!</div>
+                      <h4 className="text-sm font-bold uppercase tracking-wider font-mono text-rose-300">Pipeline Error</h4>
+                      <p className="text-xs text-center max-w-md leading-relaxed text-rose-400/80">{error}</p>
+                      <button
+                        onClick={() => runRagPipeline()}
+                        className="px-4 py-2 rounded-lg bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 text-xs font-semibold font-mono tracking-wide text-rose-300 transition-all"
+                      >
+                        Retry Pipeline
+                      </button>
                     </div>
                   ) : (
                     <div className="flex-1 min-h-[320px] flex items-center justify-center text-zinc-500">
