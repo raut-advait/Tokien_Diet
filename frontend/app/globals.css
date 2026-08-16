@@ -159,3 +159,24 @@ body {
     background-color: rgba(127,127,127,0.05);
   }
 }
+
+@layer utilities {
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;     /* Firefox */
+  }
+}
+
+/* Optional: Apply sleek hidden scrollbars to all textareas, pre, and scroll containers by default */
+textarea, pre, .overflow-y-auto, .overflow-x-auto {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+textarea::-webkit-scrollbar, pre::-webkit-scrollbar, .overflow-y-auto::-webkit-scrollbar, .overflow-x-auto::-webkit-scrollbar {
+  display: none;
+}
