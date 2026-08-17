@@ -34,6 +34,8 @@ app.add_middleware(
 use_mock = os.getenv("USE_MOCK_ENCODER", "false").lower() == "true"
 compressor = ContextCompressor(use_mock_encoder=use_mock)
 vector_store = VectorStore(use_mock_embeddings=use_mock)
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
 
 # Initialize collection and seed in-memory
 try:
@@ -80,7 +82,7 @@ class SearchAndCompressRequest(BaseModel):
     mode: str | None = Field("fixed", pattern="^(adaptive|fixed)$", example="fixed")
     target_ratio: float = Field(0.5, ge=0.0, le=1.0, example=0.5)
     dynamic_compression: bool | None = Field(None, example=True)
-    model: str | None = Field("llama-3.1-8b-instant", example="llama-3.1-8b-instant")
+    model: str | None = Field(default=None, example="llama-3.3-70b-versatile")
 
 class RAGMetrics(BaseModel):
     text: str
@@ -150,7 +152,7 @@ def synthesize_concise_answer(query: str, context: str) -> str:
             
     return " ".join(ordered_sentences)
 
-def query_groq_api(query: str, context: str, model: str = "llama-3.1-8b-instant") -> dict:
+def query_groq_api(query: str, context: str, model: str | None = None) -> dict:
     """
     Calls Groq API to run completions.
     If GROQ_API_KEY is missing, runs a simulated response mirroring expected latency/TTFT.
@@ -198,94 +200,152 @@ def query_groq_api(query: str, context: str, model: str = "llama-3.1-8b-instant"
     # Ensure prompt is non-empty
     safe_prompt = prompt if prompt.strip() else "Provide a general greeting or overview."
     
-    # Ensure model is validated/sanitized
-    if not model or "llama3-8b-8192" in str(model) or "llama3-8b" in str(model):
-        model = "llama-3.1-8b-instant"
+    # Resolve and sanitize model
+    initial_model = model if model else GROQ_MODEL
+    if initial_model == "llama-3.1-8b-instant" or "llama3-8b" in str(initial_model):
+        initial_model = "llama3-8b-8192"
         
-    data = {
-        "model": model,
-        "messages": [
-            {
-                "role": "system",
-                "content": "You are an expert full-stack developer and AI assistant. Follow all instructions, constraints, and requirements provided in the user prompt and context precisely and completely."
-            },
-            {
-                "role": "user",
-                "content": safe_prompt
-            }
-        ],
-        "temperature": 0.3,
-        "max_tokens": 1536
-    }
+    SUPPORTED_MODELS = [
+        "llama-3.3-70b-versatile",
+        "llama3-8b-8192",
+        "mixtral-8x7b-32768",
+    ]
     
-    max_retries = 2
-    for attempt in range(max_retries + 1):
-        try:
-            response = requests.post(url, headers=headers, json=data, timeout=10.0)
+    models_to_try = []
+    if initial_model:
+        models_to_try.append(initial_model)
+    for m in SUPPORTED_MODELS:
+        if m not in models_to_try:
+            models_to_try.append(m)
             
-            # Catch Rate Limit Error (HTTP 429)
-            if response.status_code == 429:
-                if attempt < max_retries:
-                    print(f"Groq API Rate Limit (429) hit. Sleeping 2 seconds before retry {attempt + 1}/{max_retries}...", flush=True)
+    last_error_msg = ""
+    for current_model in models_to_try:
+        data = {
+            "model": current_model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are an expert full-stack developer and AI assistant. Follow all instructions, constraints, and requirements provided in the user prompt and context precisely and completely."
+                },
+                {
+                    "role": "user",
+                    "content": safe_prompt
+                }
+            ],
+            "temperature": 0.3,
+            "max_tokens": 1536
+        }
+        
+        max_retries = 2
+        model_not_found = False
+        
+        for attempt in range(max_retries + 1):
+            try:
+                response = requests.post(url, headers=headers, json=data, timeout=10.0)
+                
+                # Check for 404 model_not_found
+                if response.status_code == 404:
+                    try:
+                        err_body = response.json()
+                        err_code = err_body.get("error", {}).get("code")
+                        err_msg = err_body.get("error", {}).get("message", "")
+                    except Exception:
+                        err_code = None
+                        err_msg = response.text
+                        
+                    if err_code == "model_not_found" or "model_not_found" in err_msg or "model" in err_msg:
+                        print(f"Groq API model not found (404) for model {current_model}. Error: {err_msg}. Retrying with next supported model...", flush=True)
+                        model_not_found = True
+                        break  # Break out of the attempt loop to try the next model
+                
+                # Catch Rate Limit Error (HTTP 429)
+                if response.status_code == 429:
+                    if attempt < max_retries:
+                        print(f"Groq API Rate Limit (429) hit. Sleeping 2 seconds before retry {attempt + 1}/{max_retries}...", flush=True)
+                        time.sleep(2)
+                        continue
+                    else:
+                        response.raise_for_status()
+                        
+                response.raise_for_status()
+                resp_json = response.json()
+                
+                total_time = (time.time() - start_time) * 1000
+                output_text = resp_json["choices"][0]["message"]["content"]
+                
+                # Estimate TTFT as time to headers (approx 70% of non-streamed time for Groq)
+                ttft = total_time * 0.7
+                
+                usage = resp_json.get("usage", {})
+                api_input_tokens = usage.get("prompt_tokens", input_tokens)
+                
+                return {
+                    "text": output_text,
+                    "output": output_text,
+                    "ttft_ms": round(ttft, 2),
+                    "latency_ms": round(total_time, 2),
+                    "total_latency_ms": round(total_time, 2),
+                    "input_tokens": api_input_tokens,
+                    "tokens": usage.get("completion_tokens", len(output_text) // 4)
+                }
+            except requests.exceptions.HTTPError as e:
+                is_429 = False
+                is_404 = False
+                if e.response is not None:
+                    if e.response.status_code == 429:
+                        is_429 = True
+                    elif e.response.status_code == 404:
+                        is_404 = True
+                        
+                if is_429 and attempt < max_retries:
+                    print(f"Groq API Rate Limit (429) caught in HTTPError. Sleeping 2 seconds before retry {attempt + 1}/{max_retries}...", flush=True)
                     time.sleep(2)
                     continue
-                else:
-                    response.raise_for_status()
                     
-            response.raise_for_status()
-            resp_json = response.json()
-            
-            total_time = (time.time() - start_time) * 1000
-            output_text = resp_json["choices"][0]["message"]["content"]
-            
-            # Estimate TTFT as time to headers (approx 70% of non-streamed time for Groq)
-            ttft = total_time * 0.7
-            
-            usage = resp_json.get("usage", {})
-            api_input_tokens = usage.get("prompt_tokens", input_tokens)
-            
-            return {
-                "text": output_text,
-                "output": output_text,
-                "ttft_ms": round(ttft, 2),
-                "latency_ms": round(total_time, 2),
-                "total_latency_ms": round(total_time, 2),
-                "input_tokens": api_input_tokens,
-                "tokens": usage.get("completion_tokens", len(output_text) // 4)
-            }
-        except requests.exceptions.HTTPError as e:
-            # If 429 occurs, retry if we have remaining attempts
-            is_429 = False
-            if e.response is not None and e.response.status_code == 429:
-                is_429 = True
+                if is_404:
+                    try:
+                        err_body = e.response.json()
+                        err_code = err_body.get("error", {}).get("code")
+                        err_msg = err_body.get("error", {}).get("message", "")
+                    except Exception:
+                        err_code = None
+                        err_msg = e.response.text
+                        
+                    if err_code == "model_not_found" or "model_not_found" in err_msg or "model" in err_msg:
+                        print(f"Groq API model not found (404) via HTTPError for model {current_model}. Error: {err_msg}. Retrying with next supported model...", flush=True)
+                        model_not_found = True
+                        break  # Break out of the attempt loop to try the next model
                 
-            if is_429 and attempt < max_retries:
-                print(f"Groq API Rate Limit (429) caught in HTTPError. Sleeping 2 seconds before retry {attempt + 1}/{max_retries}...", flush=True)
-                time.sleep(2)
-                continue
+                error_body = f" | Body: {e.response.text}" if e.response is not None else ""
+                last_error_msg = f"HTTP Error: {str(e)}{error_body}"
+                print(f"Groq API HTTP Error after {attempt} retries: {last_error_msg}", flush=True)
+            except Exception as e:
+                last_error_msg = str(e)
+                print(f"Groq API General Error after {attempt} retries: {last_error_msg}", flush=True)
                 
-            error_body = f" | Body: {e.response.text}" if e.response is not None else ""
-            print(f"Groq API HTTP Error after {attempt} retries: {str(e)}{error_body}", flush=True)
+        if model_not_found:
+            continue
+        else:
             return {
-                "text": f"Error calling Groq API: {str(e)}{error_body}",
-                "output": f"Error calling Groq API: {str(e)}{error_body}",
+                "text": f"Error calling Groq API: {last_error_msg}",
+                "output": f"Error calling Groq API: {last_error_msg}",
                 "ttft_ms": 150.0,
                 "latency_ms": 400.0,
                 "total_latency_ms": 400.0,
                 "input_tokens": input_tokens,
                 "tokens": 0
             }
-        except Exception as e:
-            print(f"Groq API General Error after {attempt} retries: {str(e)}", flush=True)
-            return {
-                "text": f"Error calling Groq API: {str(e)}",
-                "output": f"Error calling Groq API: {str(e)}",
-                "ttft_ms": 150.0,
-                "latency_ms": 400.0,
-                "total_latency_ms": 400.0,
-                "input_tokens": input_tokens,
-                "tokens": 0
-            }
+            
+    # If all models returned model_not_found
+    return {
+        "text": "Error calling Groq API: All attempted models returned model_not_found (404).",
+        "output": "Error calling Groq API: All attempted models returned model_not_found (404).",
+        "ttft_ms": 150.0,
+        "latency_ms": 400.0,
+        "total_latency_ms": 400.0,
+        "input_tokens": input_tokens,
+        "tokens": 0
+    }
 
 @app.get("/")
 async def root():
@@ -357,8 +417,10 @@ async def search_and_compress_route(req: SearchAndCompressRequest):
         
         # 4. Invoke LLM dynamically with sanitization
         req_model = req.model
-        if not req_model or "llama3-8b-8192" in str(req_model) or "llama3-8b" in str(req_model):
-            req_model = "llama-3.1-8b-instant"
+        if not req_model:
+            req_model = GROQ_MODEL
+        elif req_model == "llama-3.1-8b-instant" or "llama3-8b" in str(req_model):
+            req_model = "llama3-8b-8192"
             
         full_metrics = query_groq_api(sanitized_query, full_context, model=req_model)
         comp_metrics = query_groq_api(sanitized_query, compressed_context, model=req_model)
