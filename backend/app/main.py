@@ -34,7 +34,12 @@ app.add_middleware(
 use_mock = os.getenv("USE_MOCK_ENCODER", "false").lower() == "true"
 compressor = ContextCompressor(use_mock_encoder=use_mock)
 vector_store = VectorStore(use_mock_embeddings=use_mock)
+# Paste / update near lines 20–40 where environment variables and Groq client are set up:
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
+# Add this safeguard to overwrite the deprecated model name automatically:
+if GROQ_MODEL in ["llama-3.1-8b-instant", "llama3-8b-instant"]:
+    GROQ_MODEL = "llama-3.3-70b-versatile"
 
 
 # Initialize collection and seed in-memory
