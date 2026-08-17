@@ -140,3 +140,13 @@ Units tests reside in [`backend/tests/test_compressor.py`](file:///C:/Users/raut
 - Validation of query complexity and corresponding adaptive pruning ratios.
 - Verification of the Lost-in-the-Middle sentence reconstruction ordering.
 - Verification of in-memory vector store upserting and retrieval.
+
+---
+
+## 🚀 Recent Improvements & Hardening (August 2026)
+
+- **Backend Output Mapping Fix**: Resolved a payload mapping bug where `compressed_rag["text"]` incorrectly returned raw compressed context sentences. It now correctly returns the concise, synthesized LLM output (`comp_metrics["text"]`).
+- **Defensive Telemetry Calculations**: Guarded all frontend and backend latency/metric math against division-by-zero or undefined value errors. `latency_saved_ms` is computed defensively as `max(0.0, full_metrics["total_latency_ms"] - comp_metrics["total_latency_ms"])`.
+- **Proportional Simulated Latency**: When running without API keys, simulated latencies dynamically scale down according to the actual compression ratio to ensure simulated latency savings are always positive and accurate.
+- **Progressive Disclosure UI**: Redesigned the main dashboard to initially display only the input editor. Telemetry metrics, diff pruner highlights, and comparative RAG answer panels dynamically animate in only after a successful pipeline run. Secondary Recharts analytical breakdown charts are neatly tucked inside an expandable `<details>` technical disclosure accordion.
+- **Scrollbar Hiding Styles**: Added a global styling utility to hide browser default scrollbars across WebKit and Firefox while preserving smooth scrolling, applying them to scroll containers, textareas, and pre blocks.
