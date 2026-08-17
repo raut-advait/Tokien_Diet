@@ -10,7 +10,8 @@
 - **Pruned Tokens (Filler)**: `Rose-500` (`#f43f5e`) color with a clean strikethrough animation/style.
 
 ## Typography
-- **Primary Sans-Serif**: `Inter` or `Outfit` (for layout, headers, and dashboard metrics).
+- **Primary Sans-Serif**: `Inter` or `Outfit` (for la
+yout, headers, and dashboard metrics).
 - **Monospace Code/Token Font**: `JetBrains Mono` (for text compression comparison panes).
 
 ## Components & Layouts
