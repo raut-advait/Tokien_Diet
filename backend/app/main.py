@@ -38,7 +38,7 @@ vector_store = VectorStore(use_mock_embeddings=use_mock)
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 # Add this safeguard to overwrite the deprecated model name automatically:
-if GROQ_MODEL in ["llama-3.1-8b-instant", "llama3-8b-instant"]:
+if GROQ_MODEL in ["llama3-8b-instant", "llama-3.2-3b-preview", "llama-3.2-1b-preview"]:
     GROQ_MODEL = "llama-3.3-70b-versatile"
 
 
@@ -207,13 +207,15 @@ def query_groq_api(query: str, context: str, model: str | None = None) -> dict:
     
     # Resolve and sanitize model
     initial_model = model if model else GROQ_MODEL
-    if initial_model == "llama-3.1-8b-instant" or "llama3-8b" in str(initial_model):
-        initial_model = "gemma2-9b-it"
+    if initial_model in ["llama-3.2-3b-preview", "llama-3.2-1b-preview"]:
+        initial_model = "llama-3.3-70b-versatile"
+    elif "llama3-8b" in str(initial_model) and initial_model != "llama-3.1-8b-instant":
+        initial_model = "llama-3.1-8b-instant"
         
     ACTIVE_GROQ_MODELS = [
-        "gemma2-9b-it",
-        "llama-3.2-3b-preview",
-        "llama-3.2-1b-preview",
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "deepseek-r1-distill-llama-70b",
     ]
     
     models_to_try = []
@@ -435,8 +437,10 @@ async def search_and_compress_route(req: SearchAndCompressRequest):
         req_model = req.model
         if not req_model:
             req_model = GROQ_MODEL
-        elif req_model == "llama-3.1-8b-instant" or "llama3-8b" in str(req_model):
-            req_model = "gemma2-9b-it"
+        elif req_model in ["llama-3.2-3b-preview", "llama-3.2-1b-preview"]:
+            req_model = "llama-3.3-70b-versatile"
+        elif "llama3-8b" in str(req_model) and req_model != "llama-3.1-8b-instant":
+            req_model = "llama-3.1-8b-instant"
             
         full_metrics = query_groq_api(sanitized_query, full_context, model=req_model)
         comp_metrics = query_groq_api(sanitized_query, compressed_context, model=req_model)
